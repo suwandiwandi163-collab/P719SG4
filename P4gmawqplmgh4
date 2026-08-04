@@ -1,0 +1,546 @@
+local _version="1.6.64-fix"
+local WindUI=loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/".._version.."/main.lua"))()WindUI:AddTheme({Name="JHyellow",Primary=Color3.fromHex("#a78bfa"),White=Color3.fromHex("#a78bfa"),Black=Color3.new(0,0,0),Dialog=Color3.fromHex("#18181b"),Background=Color3.fromHex("#000000"),BackgroundTransparency=0,Hover=Color3.fromHex("#FFFFFF"),PanelBackground=Color3.new(1,1,1),PanelBackgroundTransparency=0.95,WindowBackground=Color3.fromHex("#0a0a0a"),WindowShadow=Color3.new(0,0,0),WindowShadowTransparency=0.6,WindowTopbarTitle=Color3.fromHex("#FFFFFF"),WindowTopbarAuthor=Color3.fromHex("#a6e3a1"),WindowTopbarIcon=Color3.fromHex("#a1a1aa"),WindowTopbarButtonIcon=Color3.fromHex("#a6e3a1"),WindowSearchBarBackground=Color3.fromHex("#0a0a0a"),TabBackground=Color3.fromHex("#a78bfa"),TabBackgroundHover=Color3.fromHex("#a78bfa"),TabBackgroundHoverTransparency=0.97,TabBackgroundActive=Color3.fromHex("#a78bfa"),TabBackgroundActiveTransparency=0.93,TabText=Color3.fromHex("#a78bfa"),TabTextTransparency=0.3,TabTextTransparencyActive=0,TabTitle=Color3.fromHex("#ffffff"),TabIcon=Color3.fromHex("#a78bfa"),TabIconTransparency=0.4,TabIconTransparencyActive=0,TabBorderTransparency=1,TabBorderTransparencyActive=0.65,TabBorder=Color3.fromHex("#a78bfa"),ElementBackground=Color3.fromHex("#FFFFFF"),ElementBackgroundTransparency=0.93,ElementBackgroundHover=WindUI.Creator:AddColor("ElementBackground","#ffffff",1/10),ElementTitle=Color3.fromHex("#FFFFFF"),ElementDesc=Color3.fromHex("#FFFFFF"),ElementIcon=Color3.fromHex("#a1a1aa"),PopupBackground=Color3.fromHex("#0a0a0a"),PopupBackgroundTransparency="BackgroundTransparency",PopupTitle=Color3.fromHex("#FFFFFF"),PopupContent=Color3.fromHex("#FFFFFF"),PopupIcon=Color3.fromHex("#a1a1aa"),DialogBackground=Color3.fromHex("#0a0a0a"),DialogBackgroundTransparency="BackgroundTransparency",DialogTitle=Color3.fromHex("#FFFFFF"),DialogContent=Color3.fromHex("#FFFFFF"),DialogIcon=Color3.fromHex("#a1a1aa"),Toggle=Color3.fromHex("#a78bfa"),ToggleBar=Color3.new(1,1,1),SliderIcon=Color3.fromHex("#a1a1aa"),Slider=Color3.fromHex("#a78bfa"),SliderThumb=Color3.new(1,1,1),SliderIconFrom=Color3.fromHex("#a1a1aa"),SliderIconTo=Color3.fromHex("#a1a1aa"),TabSectionIcon=Color3.fromHex("#a1a1aa"),SectionIcon=Color3.fromHex("#a1a1aa"),SectionExpandIcon=Color3.new(1,1,1),SectionExpandIconTransparency=0.4,SectionBox=Color3.new(1,1,1),SectionBoxTransparency=0.95,SectionBoxBorder=Color3.new(1,1,1),SectionBoxBorderTransparency=0.65,SectionBoxBackground=Color3.new(1,1,1),SectionBoxBackgroundTransparency=0.95,Notification=Color3.fromHex("#0a0a0a"),NotificationTitle=Color3.fromHex("#FFFFFF"),NotificationTitleTransparency=0,NotificationContent=Color3.fromHex("#FFFFFF"),NotificationContentTransparency=0.4,NotificationDuration=Color3.fromHex("#a78bfa"),NotificationDurationTransparency=0.95,NotificationBorder=Color3.fromHex("#a78bfa"),NotificationBorderTransparency=0.75,DropdownTabBorder=Color3.fromHex("#a78bfa"),LabelBackground=Color3.fromHex("#ffffff"),LabelBackgroundTransparency=0.95,})local Window=WindUI:CreateWindow({Title="JinHub | Run a Restaurant",Icon="rbxassetid://75269568091825",Author="Website: jinhub.my.id/topscript",Folder="JinHub Paid",Size=UDim2.fromOffset(480,350),MinSize=Vector2.new(480,350),MaxSize=Vector2.new(480,350),Transparent=true,Theme="JHyellow",Resizable=true,SideBarWidth=165,HideSearchBar=true,ScrollBarEnabled=true,NewElements=true,Acrylic=true,Radius=11,ElementsRadius=9,BackgroundImageTransparency=0.42,Background="rbxassetid://1234",})Window:DisableTopbarButtons({"Fullscreen",})Window:SetIconSize(53)local Players=game:GetService("Players")local VirtualUser=game:GetService("VirtualUser")local LocalPlayer=Players.LocalPlayer
+local Connection
+local function AntiAfk()if Connection then
+Connection:Disconnect()end
+Connection=LocalPlayer.Idled:Connect(function()pcall(function()VirtualUser:CaptureController()VirtualUser:ClickButton2(Vector2.new(0,0))end)end)end
+AntiAfk()LocalPlayer.CharacterAdded:Connect(function()task.wait(300)AntiAfk()end)print("~Thanks For Use JinHub Script~")local CoreGui=game:GetService("CoreGui")local UserInputService=game:GetService("UserInputService")local gui=Instance.new("ScreenGui")gui.Name="JinHubXMenuGUI"
+gui.IgnoreGuiInset=true
+gui.ResetOnSpawn=false
+gui.Parent=CoreGui
+local button=Instance.new("ImageButton")button.Size=UDim2.new(0,44,0,44)button.Name="JinHubXToggle"
+button.BackgroundColor3=Color3.fromRGB(13,13,13)button.Image="rbxassetid://75269568091825"
+button.AutoButtonColor=true
+button.Parent=gui
+local corner=Instance.new("UICorner",button)corner.CornerRadius=UDim.new(0,6)local stroke=Instance.new("UIStroke")stroke.Thickness=1.3
+stroke.Color=Color3.fromHex("#a78bfa")stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+stroke.Parent=button
+local gradient=Instance.new("UIGradient")gradient.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(158,124,249)),ColorSequenceKeypoint.new(1,Color3.fromRGB(201,75,241)),})gradient.Rotation=45
+gradient.Parent=stroke
+local BTN_SIZE=44
+local TOP_PADDING=45
+local function setDefaultPosition()button.Position=UDim2.new(0.5,-(BTN_SIZE/2),0,TOP_PADDING)end
+setDefaultPosition()workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(setDefaultPosition)local dragging=false
+local dragInput=nil
+local dragStart=nil
+local startPos=nil
+local function clampPosition(px,py)local screenSize=workspace.CurrentCamera.ViewportSize
+px=math.clamp(px,0,screenSize.X-BTN_SIZE)py=math.clamp(py,0,screenSize.Y-BTN_SIZE)return UDim2.new(0,px,0,py)end
+button.InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+dragging=true
+dragStart=input.Position
+startPos=button.Position
+input.Changed:Connect(function()if input.UserInputState==Enum.UserInputState.End then
+dragging=false
+end
+end)end
+end)button.InputChanged:Connect(function(input)if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then
+dragInput=input
+end
+end)UserInputService.InputChanged:Connect(function(input)if input==dragInput and dragging then
+local screenSize=workspace.CurrentCamera.ViewportSize
+local delta=input.Position-dragStart
+local px=startPos.X.Scale*screenSize.X+startPos.X.Offset+delta.X
+local py=startPos.Y.Scale*screenSize.Y+startPos.Y.Offset+delta.Y
+button.Position=clampPosition(px,py)end
+end)local opened=true
+button.MouseButton1Click:Connect(function()if opened then
+opened=false
+pcall(function()Window:Close()end)else
+opened=true
+pcall(function()Window:Open()end)end
+end)Window:OnDestroy(function()gui:Destroy()end)Window:Tag({Title="Paid-1.1",Color=Color3.fromHex("#a78bfa")})BoothTab=Window:Tab({Title="Booth Info",Icon="users-round",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})TradingTab=Window:Tab({Title="Trading",Icon="rbxassetid://101138031615428",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})Window:Divider()ConfigTab=Window:Tab({Title="Config",Icon="solar:folder-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local TradingBoothCmds=require(ReplicatedStorage.Framework.Client.TradingBoothCmds)local ItemDirectory=require(ReplicatedStorage.Framework.Directory.Item)local PetDirectory=require(ReplicatedStorage.Framework.Directory.Pet)local MAX_BOOTH_PARAGRAPHS=6
+local BoothParagraphs={}local ListingConns={}local EmptyStateParagraph=nil
+local UI_CREATE_MAX_ATTEMPTS=5
+local UI_CREATE_RETRY_DELAY=0.25
+local function SafeCreateElement(tab,methodName,config)local element=nil
+local attempts=0
+repeat
+attempts+=1
+local ok,result=pcall(function()return tab[methodName](tab,config)end)if ok and result then
+element=result
+elseif attempts<UI_CREATE_MAX_ATTEMPTS then
+task.wait(UI_CREATE_RETRY_DELAY)end
+until element or attempts>=UI_CREATE_MAX_ATTEMPTS
+return element
+end
+local function SafeParagraph(tab,config)return SafeCreateElement(tab,"Paragraph",config)end
+local RarityColors={Common="#A4A4A4",Uncommon="#A5E063",Rare="#509CE3",Premium="#D654ED",Gourmet="#FFC927",Secret="#FF5926",}local DefaultColor="#FFFFFF"
+local function GetRarityColor(rarityObj)if not rarityObj or not rarityObj.DisplayName then return DefaultColor end
+return RarityColors[rarityObj.DisplayName]or DefaultColor
+end
+local function ColorText(text,hex)return string.format('<font color="%s">%s</font>',hex,text)end
+local function BuildListingText(listings)if not listings or #listings==0 then
+return "No active listings."
+end
+local lines={}for _,listing in ipairs(listings)do
+if listing.Pet then
+local petDir=rawget(PetDirectory,listing.Pet.DirId)local petName=(petDir and petDir.DisplayName)or listing.Pet.DirId or "Unknown Pet"
+local color=GetRarityColor(petDir and petDir.Rarity)table.insert(lines,string.format("ㆍx1  %s - %d💎/ea",ColorText(petName,color),listing.Price))else
+local itemDir=rawget(ItemDirectory,listing.ItemId)local itemName=(itemDir and itemDir.DisplayName)or listing.ItemId or "Unknown Item"
+local color=GetRarityColor(itemDir and itemDir.Rarity)table.insert(lines,string.format("ㆍx%d  %s - %d💎/ea",listing.Quantity,ColorText(itemName,color),listing.Price))end
+end
+return table.concat(lines,"\n")end
+local function CountBoothParagraphs()local count=0
+for _ in pairs(BoothParagraphs)do
+count=count+1
+end
+return count
+end
+local function DestroyBoothParagraph(userId)local para=BoothParagraphs[userId]if para then
+pcall(function()para:Destroy()end)BoothParagraphs[userId]=nil
+end
+end
+local function UpdateEmptyState()if CountBoothParagraphs()==0 then
+if not EmptyStateParagraph then
+EmptyStateParagraph=SafeParagraph(BoothTab,{Title="No Booths Available",Desc="No other players currently have any active trading booth listings in this server.",})end
+else
+if EmptyStateParagraph then
+pcall(function()EmptyStateParagraph:Destroy()end)EmptyStateParagraph=nil
+end
+end
+end
+local function UpdatePlayerBoothDisplay(player)if not player or not player.Parent then return end
+local ok,listings=pcall(function()return TradingBoothCmds.GetListings(player)end)local hasListings=ok and listings and #listings>0
+if hasListings then
+local existing=BoothParagraphs[player.UserId]if existing then
+pcall(function()existing:SetDesc(BuildListingText(listings))end)else
+if CountBoothParagraphs()>=MAX_BOOTH_PARAGRAPHS then
+return
+end
+local para=SafeParagraph(BoothTab,{Title=player.Name.."'s Booth",Desc=BuildListingText(listings),})if para then
+BoothParagraphs[player.UserId]=para
+UpdateEmptyState()end
+end
+else
+DestroyBoothParagraph(player.UserId)UpdateEmptyState()end
+end
+local function HookPlayerListings(player)if player==Players.LocalPlayer then return end
+if ListingConns[player.UserId]then return end
+local ok,conn=pcall(function()return TradingBoothCmds.OnChanged(player,function()task.defer(function()UpdatePlayerBoothDisplay(player)end)end)end)if ok then
+ListingConns[player.UserId]=conn
+end
+UpdatePlayerBoothDisplay(player)end
+local function UnhookPlayerListings(player)local userId=player.UserId
+if ListingConns[userId]then
+pcall(function()ListingConns[userId]:Disconnect()end)ListingConns[userId]=nil
+end
+DestroyBoothParagraph(userId)UpdateEmptyState()end
+task.wait(0.1)for _,plr in ipairs(Players:GetPlayers())do
+HookPlayerListings(plr)end
+UpdateEmptyState()Players.PlayerAdded:Connect(function(plr)HookPlayerListings(plr)end)Players.PlayerRemoving:Connect(function(plr)UnhookPlayerListings(plr)end)local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local TeleportService=game:GetService("TeleportService")local HttpService=game:GetService("HttpService")local TradingBoothCmds=require(ReplicatedStorage.Framework.Client.TradingBoothCmds)local ItemDirectory=require(ReplicatedStorage.Framework.Directory.Item)local ClientRestaurant=require(ReplicatedStorage.Framework.Client.ClientRestaurant)local ClientTradingBooth=require(ReplicatedStorage.Framework.Client.ClientEntity.ClientTradingBooth)local LocalPlayer=Players.LocalPlayer
+local ScanDelay=5
+local BuyQuantityInput=nil
+local AutoBuyEnabled=false
+local BoothEntities={}ClientRestaurant.HookInterface(ClientTradingBooth,function(entity)local ok,owner=pcall(function()return entity:GetOwner()end)if ok and owner then
+BoothEntities[owner.UserId]=entity
+entity.OnDestroy:Connect(function()if BoothEntities[owner.UserId]==entity then
+BoothEntities[owner.UserId]=nil
+end
+end)end
+end)local function GetHRP()local char=LocalPlayer.Character
+if not char then return nil end
+return char:FindFirstChild("HumanoidRootPart")end
+local function GetBoothInteractPart(targetPlayer)local entity=BoothEntities[targetPlayer.UserId]if not entity then return nil end
+local ok,model=pcall(function()return entity:GetModel()end)if not ok or not model then return nil end
+return model:FindFirstChild("Interact",true)or model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart",true)end
+local function TeleportTo(part)local hrp=GetHRP()if not hrp or not part then return false end
+local ok=pcall(function()local targetCFrame=part.CFrame*CFrame.new(0,0,5)hrp.CFrame=CFrame.new(targetCFrame.Position,part.Position)end)return ok
+end
+local SelectedItems={Furniture={},Appliances={},Decor={},Farming={},Ranching={},Structure={},Fishing={},}local DisplayToItemDir={}local CategoryDropdowns={}local MaxPriceInputElement=nil
+local ItemPriceText={}local MaxPricePerItemMap={}local function ParsePriceText(text)local map={}for line in(text or ""):gmatch("[^\r\n]+")do
+local name,value=line:match("^%s*(.-)%s*=%s*(.-)%s*$")if name and name~="" then
+map[name]=value or ""
+end
+end
+return map
+end
+local function RebuildPriceMap()MaxPricePerItemMap={}for name,raw in pairs(ItemPriceText)do
+local n=tonumber(raw)if n and n>0 then
+local dir=DisplayToItemDir[name]if dir then
+MaxPricePerItemMap[dir._id]=math.floor(n)end
+end
+end
+end
+local function RebuildPriceTextarea()local lines={}local seen={}for _,dirs in pairs(SelectedItems)do
+for _,dir in ipairs(dirs)do
+if not seen[dir.DisplayName]then
+seen[dir.DisplayName]=true
+local existing=ItemPriceText[dir.DisplayName]or ""
+table.insert(lines,dir.DisplayName.." = "..existing)end
+end
+end
+table.sort(lines)local text=table.concat(lines,"\n")if MaxPriceInputElement then
+pcall(function()MaxPriceInputElement:Set(text)end)end
+RebuildPriceMap()end
+local UI_CREATE_MAX_ATTEMPTS=5
+local UI_CREATE_RETRY_DELAY=0.25
+local function SafeCreateElement(tab,methodName,config)local element=nil
+local attempts=0
+repeat
+attempts+=1
+local ok,result=pcall(function()return tab[methodName](tab,config)end)if ok and result then
+element=result
+elseif attempts<UI_CREATE_MAX_ATTEMPTS then
+task.wait(UI_CREATE_RETRY_DELAY)end
+until element or attempts>=UI_CREATE_MAX_ATTEMPTS
+return element
+end
+local function SafeDropdown(tab,config)return SafeCreateElement(tab,"Dropdown",config)end
+local function SafeToggle(tab,config)return SafeCreateElement(tab,"Toggle",config)end
+local function SafeInput(tab,config)return SafeCreateElement(tab,"Input",config)end
+local function SafeButton(tab,config)return SafeCreateElement(tab,"Button",config)end
+local function NotifyWatch(title,content,icon,duration)pcall(function()WindUI:Notify({Title=title,Content=content,Icon=icon or "info",Duration=duration or 3.5,})end)end
+local Running=false
+local RunToken=0
+local VISITED_FILE="booth_watcher_visited_servers.json"
+local MAX_VISITED=25
+local MIN_POPULATION=5
+local function LoadVisited()local ok,content=pcall(function()return readfile(VISITED_FILE)end)if ok and content then
+local ok2,decoded=pcall(function()return HttpService:JSONDecode(content)end)if ok2 and type(decoded)=="table" then
+return decoded
+end
+end
+return{}end
+local VisitedServers=LoadVisited()local function SaveVisited()pcall(function()writefile(VISITED_FILE,HttpService:JSONEncode(VisitedServers))end)end
+local function IsVisited(jobId)for _,id in ipairs(VisitedServers)do
+if id==jobId then return true end
+end
+return false
+end
+local function MarkVisited(jobId)if IsVisited(jobId)then return end
+table.insert(VisitedServers,jobId)while #VisitedServers>MAX_VISITED do
+table.remove(VisitedServers,1)end
+SaveVisited()end
+MarkVisited(game.JobId)local function GetAllItemsByCategory(category)local list={"--None--"}for _,dir in pairs(ItemDirectory)do
+if type(dir)=="table" and dir.DisplayName and dir._id and dir.ShopCategory==category then
+DisplayToItemDir[dir.DisplayName]=dir
+table.insert(list,dir.DisplayName)end
+end
+table.sort(list,function(a,b)if a=="--None--" then return true end
+if b=="--None--" then return false end
+return a<b
+end)return list
+end
+local function BuildTargetIdSet()local set={}local any=false
+for category,dirs in pairs(SelectedItems)do
+for _,dir in ipairs(dirs)do
+if dir then
+set[dir._id]=dir.DisplayName
+any=true
+end
+end
+end
+return set,any
+end
+local function ScanServerForTargets(targetSet)for _,plr in ipairs(Players:GetPlayers())do
+if plr~=LocalPlayer then
+local ok,listings=pcall(function()return TradingBoothCmds.GetListings(plr)end)if ok and listings then
+for _,listing in ipairs(listings)do
+if not listing.Pet and targetSet[listing.ItemId]then
+return plr,listing,targetSet[listing.ItemId]end
+end
+end
+end
+end
+return nil,nil,nil
+end
+local function ListingStillExists(targetPlayer,listingId)if not targetPlayer or not targetPlayer.Parent then
+return false
+end
+local ok,listings=pcall(function()return TradingBoothCmds.GetListings(targetPlayer)end)if not ok or not listings then
+return false
+end
+for _,listing in ipairs(listings)do
+if listing.ListingId==listingId then
+return true
+end
+end
+return false
+end
+local function ScanServerForBuyableTarget(targetSet)for _,plr in ipairs(Players:GetPlayers())do
+if plr~=LocalPlayer then
+local ok,listings=pcall(function()return TradingBoothCmds.GetListings(plr)end)if ok and listings then
+for _,listing in ipairs(listings)do
+if not listing.Pet and targetSet[listing.ItemId]then
+local limit=MaxPricePerItemMap[listing.ItemId]if not limit or listing.Price<=limit then
+return plr,listing,targetSet[listing.ItemId]end
+end
+end
+end
+end
+end
+return nil,nil,nil
+end
+local function AttemptAutoBuy(targetPlayer,originalListing,itemName,quantityOverride)local hrp=GetHRP()if not hrp then
+NotifyWatch("Warning!","Character not found, skipping buy.","triangle-alert",3)return false,0
+end
+local boothPart=GetBoothInteractPart(targetPlayer)if not boothPart then
+NotifyWatch("Warning!","Couldn't find that player's booth, skipping buy.","map-pin-off",3)return false,0
+end
+local originalCFrame=hrp.CFrame
+if not TeleportTo(boothPart)then
+NotifyWatch("Failed","Couldn't teleport to that booth.","circle-x",3)return false,0
+end
+task.wait(0.3)local ok,listings=pcall(function()return TradingBoothCmds.GetListings(targetPlayer)end)local currentListing=nil
+if ok and listings then
+for _,l in ipairs(listings)do
+if l.ListingId==originalListing.ListingId then
+currentListing=l
+break
+end
+end
+end
+if not currentListing then
+NotifyWatch("Missed It!","Listing disappeared before purchase.","package-x",3)hrp.CFrame=originalCFrame
+return false,0
+end
+local limit=MaxPricePerItemMap[currentListing.ItemId]if limit and currentListing.Price>limit then
+NotifyWatch("Too Expensive",string.format("%s is %d💎 each, over your limit.",itemName,currentListing.Price),"coins",3)hrp.CFrame=originalCFrame
+return false,0
+end
+local wantQty=quantityOverride
+if wantQty==nil then
+wantQty=BuyQuantityInput
+end
+local quantityToBuy=currentListing.Quantity
+if wantQty and wantQty>0 then
+quantityToBuy=math.min(wantQty,currentListing.Quantity)end
+local success,err=TradingBoothCmds.Buy(targetPlayer,currentListing.ListingId,quantityToBuy,currentListing.Price)if success then
+NotifyWatch("Sniped!",string.format("Bought %s x%d from %s for %d💎 each.",itemName,quantityToBuy,targetPlayer.Name,currentListing.Price),"check-check",5)else
+NotifyWatch("Failed",tostring(err or "Couldn't complete the purchase."),"circle-x",4)end
+hrp.CFrame=originalCFrame
+return success,(success and quantityToBuy or 0)end
+local function AutoBuyFulfill(targetSet)local remaining=BuyQuantityInput
+local totalBought=0
+local anyBought=false
+local lastItemName=nil
+while Running do
+if remaining and remaining<=0 then
+break
+end
+local foundPlayer,foundListing,foundItemName=ScanServerForBuyableTarget(targetSet)if not foundPlayer then
+break
+end
+lastItemName=foundItemName
+NotifyWatch("Found It!",("%s is selling %s, attempting to buy..."):format(foundPlayer.Name,foundItemName),"target",3)local success,boughtQty=AttemptAutoBuy(foundPlayer,foundListing,foundItemName,remaining)if success then
+anyBought=true
+totalBought=totalBought+(boughtQty or 0)if remaining then
+remaining=remaining-(boughtQty or 0)end
+else
+break
+end
+if not Running then
+break
+end
+task.wait(0.5)end
+return anyBought,totalBought,lastItemName
+end
+local SERVER_FETCH_PAGES=3
+local function FetchServerPages()local allServers={}local cursor=""
+for _=1,SERVER_FETCH_PAGES do
+local url=("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100"):format(game.PlaceId)if cursor~="" then
+url=url.."&cursor="..cursor
+end
+local ok,result=pcall(function()return HttpService:JSONDecode(game:HttpGet(url))end)if not ok or not result or not result.data then
+break
+end
+for _,server in ipairs(result.data)do
+table.insert(allServers,server)end
+if result.nextPageCursor and result.nextPageCursor~="" then
+cursor=result.nextPageCursor
+else
+break
+end
+end
+return allServers
+end
+local function ServerHop()local allServers=FetchServerPages()if #allServers>0 then
+local function collectCandidates(ignoreVisited)local list={}for _,server in ipairs(allServers)do
+local notFull=server.playing<server.maxPlayers
+local notCurrent=server.id~=game.JobId
+local notVisited=ignoreVisited or not IsVisited(server.id)if notFull and notCurrent and notVisited then
+table.insert(list,server)end
+end
+return list
+end
+local candidates=collectCandidates(false)if #candidates==0 then
+VisitedServers={game.JobId}SaveVisited()candidates=collectCandidates(false)end
+table.sort(candidates,function(a,b)return a.playing>b.playing
+end)local target=nil
+for _,server in ipairs(candidates)do
+if server.playing>=MIN_POPULATION then
+target=server
+break
+end
+end
+if not target and #candidates>0 then
+target=candidates[1]end
+if target then
+MarkVisited(target.id)local tpOk=pcall(function()TeleportService:TeleportToPlaceInstance(game.PlaceId,target.id,LocalPlayer)end)if tpOk then return end
+end
+end
+pcall(function()TeleportService:Teleport(game.PlaceId,LocalPlayer)end)end
+local function RunLoop(myToken)while Running and RunToken==myToken do
+local targetSet,hasTarget=BuildTargetIdSet()if not hasTarget then
+NotifyWatch("Slow Down!","Select at least 1 target item first!","search",3)task.wait(ScanDelay)else
+if AutoBuyEnabled then
+local anyBought,totalBought,itemNameUsed=AutoBuyFulfill(targetSet)if anyBought then
+NotifyWatch("Bought! Hopping...",string.format("Got %dx %s total this round - moving to another server.",totalBought,itemNameUsed or "item"),"server",4)task.wait(ScanDelay)if Running and RunToken==myToken then
+ServerHop()end
+return
+end
+task.wait(ScanDelay)if Running and RunToken==myToken then
+NotifyWatch("No Match","Target not found in this server, hopping...","server",3)ServerHop()return
+end
+else
+local foundPlayer,foundListing,foundItemName=ScanServerForTargets(targetSet)if foundPlayer and foundListing then
+NotifyWatch("Found It!",("%s is selling %s - watching until it's gone..."):format(foundPlayer.Name,foundItemName),"target",4)while Running and RunToken==myToken and not AutoBuyEnabled and ListingStillExists(foundPlayer,foundListing.ListingId)do
+task.wait(ScanDelay)end
+if Running and RunToken==myToken then
+if AutoBuyEnabled and ListingStillExists(foundPlayer,foundListing.ListingId)then
+local limit=MaxPricePerItemMap[foundListing.ItemId]if limit and foundListing.Price>limit then
+NotifyWatch("Too Expensive",string.format("%s is %d💎 each, over your limit - hopping instead.",foundItemName,foundListing.Price),"coins",3)ServerHop()return
+end
+NotifyWatch("Auto Buy Enabled","Switching to buy mode for this listing...","shopping-cart",3)local anyBought,totalBought,itemNameUsed=AutoBuyFulfill(targetSet)if anyBought then
+NotifyWatch("Bought! Hopping...",string.format("Got %dx %s total this round - moving to another server.",totalBought,itemNameUsed or foundItemName),"server",4)task.wait(ScanDelay)if Running and RunToken==myToken then
+ServerHop()end
+return
+end
+task.wait(ScanDelay)else
+NotifyWatch("Item Gone",("%s's listing is gone - resuming scan."):format(foundItemName),"eye",3)end
+end
+else
+task.wait(ScanDelay)if Running and RunToken==myToken then
+NotifyWatch("No Match","Target not found in this server, hopping...","server",3)ServerHop()return
+end
+end
+end
+end
+end
+end
+task.wait(0.1)local Categories={"Furniture","Appliances","Decor","Farming","Ranching","Structure","Fishing"}for _,category in ipairs(Categories)do
+local dropdown=SafeDropdown(TradingTab,{Title=category,Values=GetAllItemsByCategory(category),SearchBarEnabled=true,AllowNone=true,Multi=true,Flag="hopp_target_"..category,Callback=function(v)local dirs={}if type(v)=="table" then
+local isArray=(#v>0)if isArray then
+for _,display in ipairs(v)do
+if display and display~="--None--" and DisplayToItemDir[display]then
+table.insert(dirs,DisplayToItemDir[display])end
+end
+else
+for display,selected in pairs(v)do
+if selected and display~="--None--" and DisplayToItemDir[display]then
+table.insert(dirs,DisplayToItemDir[display])end
+end
+end
+elseif type(v)=="string" and v~="--None--" and DisplayToItemDir[v]then
+table.insert(dirs,DisplayToItemDir[v])end
+SelectedItems[category]=dirs
+RebuildPriceTextarea()end,})CategoryDropdowns[category]=dropdown
+end
+SafeInput(TradingTab,{Title="Buy Quantity",Placeholder="empty for buy all stock",Desc="Optional",Flag="quaty",Callback=function(text)local n=tonumber(text)if n and n>0 then
+BuyQuantityInput=math.floor(n)else
+BuyQuantityInput=nil
+end
+end,})MaxPriceInputElement=SafeInput(TradingTab,{Title="Max 💎/ea",Type="Textarea",Placeholder="Set Item in Dropdown, then fill in a price after each \"=\"",Value="",Flag="maxxx",Callback=function(text)local parsed=ParsePriceText(text)for name,value in pairs(parsed)do
+ItemPriceText[name]=value
+end
+RebuildPriceMap()end,})SafeToggle(TradingTab,{Title="Auto Buy When Found",Value=false,Flag="hopp_autobuy",Callback=function(state)AutoBuyEnabled=state
+if state then
+NotifyWatch("Auto Buy ON","Will buy automatically when a target item is found.","shopping-cart",3)else
+NotifyWatch("Auto Buy OFF","Back to watch-only mode.","eye",3)end
+end,})SafeToggle(TradingTab,{Title="Auto Watch & Server Hop",Desc="Automatic Find items based on selection",Value=false,Flag="hopp",Callback=function(state)if state then
+if Running then return end
+Running=true
+RunToken=RunToken+1
+local myToken=RunToken
+local targetSet,hasTarget=BuildTargetIdSet()if hasTarget then
+local names={}for _,name in pairs(targetSet)do
+table.insert(names,name)end
+NotifyWatch("Watcher Started","Targeting: "..table.concat(names,", "),"eye",5)else
+NotifyWatch("Watcher Started","WARNING: no item selected! Pick one before toggling.","triangle-alert",5)end
+task.spawn(function()RunLoop(myToken)end)else
+Running=false
+NotifyWatch("Watcher Stopped","Auto watch has been turned off.","octagon-pause",3)end
+end,})SafeButton(TradingTab,{Title="Skip Server",Callback=function()RunToken=RunToken+1
+local myToken=RunToken
+NotifyWatch("Skipping Server","Manually hopping to another server...","skip-forward",3)ServerHop()if Running then
+task.spawn(function()RunLoop(myToken)end)end
+end,})local HttpService=game:GetService("HttpService")local BaseFolder=Window.Folder
+local ConfigFolder=BaseFolder.."/configs"
+local IndexFile=ConfigFolder.."/index.json"
+local AutoLoadFile=BaseFolder.."/autoload.txt"
+if makefolder then
+if not isfolder(BaseFolder)then
+makefolder(BaseFolder)end
+if not isfolder(ConfigFolder)then
+makefolder(ConfigFolder)end
+end
+local ConfigName=""
+local SelectedConfig=nil
+local ConfigDropdown
+local AutoLoadButton
+local function Notify(title,text,color)WindUI:Notify({Title=title,Content=text,Duration=3,Color=color or Color3.fromRGB(100,255,100),})end
+local function LoadIndex()if isfile and isfile(IndexFile)then
+local ok,data=pcall(function()return HttpService:JSONDecode(readfile(IndexFile))end)if ok and type(data)=="table" then
+return data
+end
+end
+return{}end
+local function SaveIndex(t)if writefile then
+writefile(IndexFile,HttpService:JSONEncode(t))end
+end
+local function HasConfig(name)for _,v in ipairs(LoadIndex())do
+if v==name then
+return true
+end
+end
+return false
+end
+local function GetAutoLoad()if isfile and isfile(AutoLoadFile)then
+return readfile(AutoLoadFile)end
+return ""
+end
+local function UpdateAutoLoadDesc()local name=GetAutoLoad()if AutoLoadButton then
+AutoLoadButton:SetDesc(name~="" and("Auto Load : "..name)or "No Auto Load Config")end
+end
+ConfigTab:Input({Title="Config Name",Callback=function(text)ConfigName=text
+end,})ConfigDropdown=ConfigTab:Dropdown({Title="Select Config",Values=LoadIndex(),Multi=false,Callback=function(v)SelectedConfig=v
+ConfigName=v
+end,})local function UpdateDropdown()if ConfigDropdown and ConfigDropdown.Refresh then
+ConfigDropdown:Refresh(LoadIndex())end
+end
+local ConfigGroup=ConfigTab:Group({})ConfigGroup:Button({Title="Create Config",Callback=function()if ConfigName=="" then
+Notify("Error","Config empty",Color3.fromRGB(255,100,100))return
+end
+if HasConfig(ConfigName)then
+Notify("Error","Config already exist",Color3.fromRGB(255,100,100))return
+end
+Window.ConfigManager:Config(ConfigName):Save()local list=LoadIndex()table.insert(list,ConfigName)SaveIndex(list)UpdateDropdown()SelectedConfig=ConfigName
+task.defer(function()if ConfigDropdown and ConfigDropdown.Set then
+ConfigDropdown:Set(ConfigName)end
+end)Notify("Success","Config created: "..ConfigName)end,})ConfigGroup:Button({Title="Overwrite Config",Callback=function()if not SelectedConfig then
+Notify("Error","selected config fist!",Color3.fromRGB(255,100,100))return
+end
+Window.ConfigManager:Config(SelectedConfig):Save()Notify("Success","Overwrite: "..SelectedConfig)end,})ConfigTab:Button({Title="Load Config",Callback=function()if not SelectedConfig then
+Notify("Error","selected config fist!",Color3.fromRGB(255,100,100))return
+end
+Window.ConfigManager:Config(SelectedConfig):Load()Notify("Success","Loaded: "..SelectedConfig)end,})AutoLoadButton=ConfigTab:Button({Title="Set Auto Load",Desc="No Auto Load Config",Callback=function()if not SelectedConfig then
+Notify("Error","selected config fist!",Color3.fromRGB(255,100,100))return
+end
+writefile(AutoLoadFile,SelectedConfig)UpdateAutoLoadDesc()Notify("Success","Auto load set: "..SelectedConfig)end,})ConfigTab:Button({Title="Reset Auto Load",Callback=function()writefile(AutoLoadFile,"")UpdateAutoLoadDesc()Notify("Success","Auto load delete")end,})ConfigTab:Button({Title="Remove Selected",Callback=function()if not SelectedConfig then
+Notify("Error","select config first!",Color3.fromRGB(255,100,100))return
+end
+local list=LoadIndex()for i,v in ipairs(list)do
+if v==SelectedConfig then
+table.remove(list,i)break
+end
+end
+SaveIndex(list)if GetAutoLoad()==SelectedConfig then
+writefile(AutoLoadFile,"")end
+SelectedConfig=nil
+ConfigName=""
+UpdateDropdown()UpdateAutoLoadDesc()Notify("Success","Config deleted")end,})ConfigTab:Button({Title="Remove All",Callback=function()SaveIndex({})writefile(AutoLoadFile,"")SelectedConfig=nil
+ConfigName=""
+UpdateDropdown()UpdateAutoLoadDesc()Notify("Success","all config deleted!")end,})task.spawn(function()task.wait(1)local auto=GetAutoLoad()if auto~="" then
+pcall(function()Window.ConfigManager:Config(auto):Load()end)Notify("Success","Auto loaded: "..auto)end
+UpdateAutoLoadDesc()end)
