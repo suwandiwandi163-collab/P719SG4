@@ -49,7 +49,7 @@ opened=false
 pcall(function()Window:Close()end)else
 opened=true
 pcall(function()Window:Open()end)end
-end)Window:OnDestroy(function()gui:Destroy()end)Window:Tag({Title="Paid-1.3",Color=Color3.fromHex("#a78bfa")})BoothTab=Window:Tab({Title="Booth Info",Icon="users-round",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})TradingTab=Window:Tab({Title="Trading",Icon="rbxassetid://101138031615428",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})Window:Divider()ConfigTab=Window:Tab({Title="Config",Icon="solar:folder-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local TradingBoothCmds=require(ReplicatedStorage.Framework.Client.TradingBoothCmds)local ItemDirectory=require(ReplicatedStorage.Framework.Directory.Item)local PetDirectory=require(ReplicatedStorage.Framework.Directory.Pet)local MAX_BOOTH_PARAGRAPHS=6
+end)Window:OnDestroy(function()gui:Destroy()end)Window:Tag({Title="Paid-1.4",Color=Color3.fromHex("#a78bfa")})BoothTab=Window:Tab({Title="Booth Info",Icon="users-round",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})TradingTab=Window:Tab({Title="Trading",Icon="rbxassetid://101138031615428",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})Window:Divider()ConfigTab=Window:Tab({Title="Config",Icon="solar:folder-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local TradingBoothCmds=require(ReplicatedStorage.Framework.Client.TradingBoothCmds)local ItemDirectory=require(ReplicatedStorage.Framework.Directory.Item)local PetDirectory=require(ReplicatedStorage.Framework.Directory.Pet)local MAX_BOOTH_PARAGRAPHS=6
 local BoothParagraphs={}local ListingConns={}local EmptyStateParagraph=nil
 local UI_CREATE_MAX_ATTEMPTS=5
 local UI_CREATE_RETRY_DELAY=0.25
@@ -194,27 +194,28 @@ local function NotifyWatch(title,content,icon,duration)pcall(function()WindUI:No
 local Running=false
 local RunToken=0
 local VISITED_FILE="booth_watcher_visited_servers.json"
-local MAX_VISITED=60
-local VISITED_KEEP_ON_RESET=10
-local SWEET_SPOT_MIN=4
-local SWEET_SPOT_MAX=5
+local BLACKLIST_DURATION=120*60
 local function LoadVisited()local ok,content=pcall(function()return readfile(VISITED_FILE)end)if ok and content then
 local ok2,decoded=pcall(function()return HttpService:JSONDecode(content)end)if ok2 and type(decoded)=="table" then
 return decoded
 end
 end
 return{}end
-local VisitedServers=LoadVisited()local function SaveVisited()pcall(function()writefile(VISITED_FILE,HttpService:JSONEncode(VisitedServers))end)end
-local function IsVisited(jobId)for _,id in ipairs(VisitedServers)do
-if id==jobId then return true end
+local VisitedServers=LoadVisited()local function PruneExpiredVisited()local now=os.time()for jobId,ts in pairs(VisitedServers)do
+if type(ts)~="number" or(now-ts)>=BLACKLIST_DURATION then
+VisitedServers[jobId]=nil
 end
+end
+end
+local function SaveVisited()PruneExpiredVisited()pcall(function()writefile(VISITED_FILE,HttpService:JSONEncode(VisitedServers))end)end
+local function IsVisited(jobId)local ts=VisitedServers[jobId]if not ts then return false end
+if(os.time()-ts)>=BLACKLIST_DURATION then
 return false
 end
-local function MarkVisited(jobId)if IsVisited(jobId)then return end
-table.insert(VisitedServers,jobId)while #VisitedServers>MAX_VISITED do
-table.remove(VisitedServers,1)end
-SaveVisited()end
-MarkVisited(game.JobId)local function GetAllItemsByCategory(category)local list={"--None--"}for _,dir in pairs(ItemDirectory)do
+return true
+end
+local function MarkVisited(jobId)VisitedServers[jobId]=os.time()SaveVisited()end
+PruneExpiredVisited()MarkVisited(game.JobId)local function GetAllItemsByCategory(category)local list={"--None--"}for _,dir in pairs(ItemDirectory)do
 if type(dir)=="table" and dir.DisplayName and dir._id and dir.ShopCategory==category then
 DisplayToItemDir[dir.DisplayName]=dir
 table.insert(list,dir.DisplayName)end
@@ -260,13 +261,15 @@ end
 end
 return false
 end
-local function ScanServerForBuyableTarget(targetSet)for _,plr in ipairs(Players:GetPlayers())do
+local function ScanServerForBuyableTarget(targetSet,excludeIds)for _,plr in ipairs(Players:GetPlayers())do
 if plr~=LocalPlayer then
 local ok,listings=pcall(function()return TradingBoothCmds.GetListings(plr)end)if ok and listings then
 for _,listing in ipairs(listings)do
 if not listing.Pet and targetSet[listing.ItemId]then
+local skip=excludeIds and excludeIds[listing.ListingId]if not skip then
 local limit=MaxPricePerItemMap[listing.ItemId]if not limit or listing.Price<=limit then
 return plr,listing,targetSet[listing.ItemId]end
+end
 end
 end
 end
@@ -317,11 +320,11 @@ local function AutoBuyFulfill(targetSet)local remaining=BuyQuantityInput
 local totalBought=0
 local anyBought=false
 local lastItemName=nil
-while Running do
+local excluded={}while Running do
 if remaining and remaining<=0 then
 break
 end
-local foundPlayer,foundListing,foundItemName=ScanServerForBuyableTarget(targetSet)if not foundPlayer then
+local foundPlayer,foundListing,foundItemName=ScanServerForBuyableTarget(targetSet,excluded)if not foundPlayer then
 break
 end
 lastItemName=foundItemName
@@ -330,7 +333,7 @@ anyBought=true
 totalBought=totalBought+(boughtQty or 0)if remaining then
 remaining=remaining-(boughtQty or 0)end
 else
-break
+excluded[foundListing.ListingId]=true
 end
 if not Running then
 break
@@ -357,6 +360,18 @@ end
 end
 return allServers
 end
+local PREFERRED_POPULATION=4
+local function SortCandidatesByPreferredPopulation(candidates)local tier1,tier2,tier3={},{},{}for _,server in ipairs(candidates)do
+local diff=math.abs(server.playing-PREFERRED_POPULATION)if diff==0 then
+table.insert(tier1,server)elseif diff==1 then
+table.insert(tier2,server)else
+table.insert(tier3,server)end
+end
+local ordered={}for _,s in ipairs(tier1)do table.insert(ordered,s)end
+for _,s in ipairs(tier2)do table.insert(ordered,s)end
+for _,s in ipairs(tier3)do table.insert(ordered,s)end
+return ordered
+end
 local function ServerHop()local allServers=FetchServerPages()if #allServers>0 then
 local function collectCandidates(ignoreVisited)local list={}for _,server in ipairs(allServers)do
 local notFull=server.playing<server.maxPlayers
@@ -366,18 +381,18 @@ table.insert(list,server)end
 end
 return list
 end
-local candidates=collectCandidates(false)if #candidates==0 then
-local keep={}local startIdx=math.max(1,#VisitedServers-VISITED_KEEP_ON_RESET+1)for i=startIdx,#VisitedServers do
-table.insert(keep,VisitedServers[i])end
-VisitedServers=keep
-SaveVisited()candidates=collectCandidates(false)end
-local sweetSpot={}local fallback={}for _,server in ipairs(candidates)do
-if server.playing>=SWEET_SPOT_MIN and server.playing<=SWEET_SPOT_MAX then
-table.insert(sweetSpot,server)else
-table.insert(fallback,server)end
-end
-table.sort(sweetSpot,function(a,b)return a.playing>b.playing end)table.sort(fallback,function(a,b)return a.playing>b.playing end)local orderedTargets={}for _,s in ipairs(sweetSpot)do table.insert(orderedTargets,s)end
-for _,s in ipairs(fallback)do table.insert(orderedTargets,s)end
+local candidates=collectCandidates(false)local usedFallback=false
+if #candidates==0 then
+usedFallback=true
+candidates=collectCandidates(true)table.sort(candidates,function(a,b)local tsA=VisitedServers[a.id]or 0
+local tsB=VisitedServers[b.id]or 0
+return tsA<tsB
+end)end
+local orderedTargets
+if usedFallback then
+orderedTargets=candidates
+else
+orderedTargets=SortCandidatesByPreferredPopulation(candidates)end
 for _,target in ipairs(orderedTargets)do
 if target.playing<target.maxPlayers then
 MarkVisited(target.id)local tpOk=pcall(function()TeleportService:TeleportToPlaceInstance(game.PlaceId,target.id,LocalPlayer)end)if tpOk then
@@ -405,15 +420,15 @@ NotifyWatch("Found It!",("%s is selling %s - watching until it's gone..."):forma
 task.wait(ScanDelay)end
 if Running and RunToken==myToken then
 if AutoBuyEnabled and ListingStillExists(foundPlayer,foundListing.ListingId)then
-local limit=MaxPricePerItemMap[foundListing.ItemId]if limit and foundListing.Price>limit then
-NotifyWatch("Too Expensive",string.format("%s is %d💎 each, over your limit - hopping instead.",foundItemName,foundListing.Price),"coins",3)ServerHop()return
-end
-NotifyWatch("Auto Buy Enabled","Switching to buy mode for this listing...","shopping-cart",3)local anyBought,totalBought,itemNameUsed=AutoBuyFulfill(targetSet)if anyBought then
+NotifyWatch("Auto Buy Enabled","Switching to buy mode, scanning for the best match...","shopping-cart",3)local anyBought,totalBought,itemNameUsed=AutoBuyFulfill(targetSet)if anyBought then
 NotifyWatch("Bought! Hopping...",string.format("Got %dx %s total this round - moving to another server.",totalBought,itemNameUsed or foundItemName),"server",4)task.wait(ScanDelay)if Running and RunToken==myToken then
 ServerHop()end
 return
 end
-task.wait(ScanDelay)else
+NotifyWatch("No Affordable Match","Nothing within your price limits was found here - hopping...","coins",3)task.wait(ScanDelay)if Running and RunToken==myToken then
+ServerHop()end
+return
+else
 NotifyWatch("Item Gone",("%s's listing is gone - resuming scan."):format(foundItemName),"eye",3)end
 end
 else
@@ -467,7 +482,7 @@ NotifyWatch("Watcher Started","WARNING: no item selected! Pick one before toggli
 task.spawn(function()RunLoop(myToken)end)else
 Running=false
 NotifyWatch("Watcher Stopped","Auto watch has been turned off.","octagon-pause",3)end
-end,})SafeButton(TradingTab,{Title="Skip Server",Callback=function()RunToken=RunToken+1
+end,})SafeButton(TradingTab,{Title="Skip this Server",Callback=function()RunToken=RunToken+1
 local myToken=RunToken
 NotifyWatch("Skipping Server","Manually hopping to another server...","skip-forward",3)ServerHop()if Running then
 task.spawn(function()RunLoop(myToken)end)end
