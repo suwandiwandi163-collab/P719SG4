@@ -1,0 +1,1030 @@
+local _version="1.6.64-fix"
+local WindUI=loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/".._version.."/main.lua"))()WindUI:AddTheme({Name="JHyellow",Primary=Color3.fromHex("#a78bfa"),White=Color3.fromHex("#a78bfa"),Black=Color3.new(0,0,0),Dialog=Color3.fromHex("#18181b"),Background=Color3.fromHex("#000000"),BackgroundTransparency=0,Hover=Color3.fromHex("#FFFFFF"),PanelBackground=Color3.new(1,1,1),PanelBackgroundTransparency=0.95,WindowBackground=Color3.fromHex("#0a0a0a"),WindowShadow=Color3.new(0,0,0),WindowShadowTransparency=0.6,WindowTopbarTitle=Color3.fromHex("#FFFFFF"),WindowTopbarAuthor=Color3.fromHex("#a6e3a1"),WindowTopbarIcon=Color3.fromHex("#a1a1aa"),WindowTopbarButtonIcon=Color3.fromHex("#a6e3a1"),WindowSearchBarBackground=Color3.fromHex("#0a0a0a"),TabBackground=Color3.fromHex("#a78bfa"),TabBackgroundHover=Color3.fromHex("#a78bfa"),TabBackgroundHoverTransparency=0.97,TabBackgroundActive=Color3.fromHex("#a78bfa"),TabBackgroundActiveTransparency=0.93,TabText=Color3.fromHex("#a78bfa"),TabTextTransparency=0.3,TabTextTransparencyActive=0,TabTitle=Color3.fromHex("#ffffff"),TabIcon=Color3.fromHex("#a78bfa"),TabIconTransparency=0.4,TabIconTransparencyActive=0,TabBorderTransparency=1,TabBorderTransparencyActive=0.65,TabBorder=Color3.fromHex("#a78bfa"),ElementBackground=Color3.fromHex("#FFFFFF"),ElementBackgroundTransparency=0.93,ElementBackgroundHover=WindUI.Creator:AddColor("ElementBackground","#ffffff",1/10),ElementTitle=Color3.fromHex("#FFFFFF"),ElementDesc=Color3.fromHex("#FFFFFF"),ElementIcon=Color3.fromHex("#a1a1aa"),PopupBackground=Color3.fromHex("#0a0a0a"),PopupBackgroundTransparency="BackgroundTransparency",PopupTitle=Color3.fromHex("#FFFFFF"),PopupContent=Color3.fromHex("#FFFFFF"),PopupIcon=Color3.fromHex("#a1a1aa"),DialogBackground=Color3.fromHex("#0a0a0a"),DialogBackgroundTransparency="BackgroundTransparency",DialogTitle=Color3.fromHex("#FFFFFF"),DialogContent=Color3.fromHex("#FFFFFF"),DialogIcon=Color3.fromHex("#a1a1aa"),Toggle=Color3.fromHex("#a78bfa"),ToggleBar=Color3.new(1,1,1),SliderIcon=Color3.fromHex("#a1a1aa"),Slider=Color3.fromHex("#a78bfa"),SliderThumb=Color3.new(1,1,1),SliderIconFrom=Color3.fromHex("#a1a1aa"),SliderIconTo=Color3.fromHex("#a1a1aa"),TabSectionIcon=Color3.fromHex("#a1a1aa"),SectionIcon=Color3.fromHex("#a1a1aa"),SectionExpandIcon=Color3.new(1,1,1),SectionExpandIconTransparency=0.4,SectionBox=Color3.new(1,1,1),SectionBoxTransparency=0.95,SectionBoxBorder=Color3.new(1,1,1),SectionBoxBorderTransparency=0.65,SectionBoxBackground=Color3.new(1,1,1),SectionBoxBackgroundTransparency=0.95,Notification=Color3.fromHex("#0a0a0a"),NotificationTitle=Color3.fromHex("#FFFFFF"),NotificationTitleTransparency=0,NotificationContent=Color3.fromHex("#FFFFFF"),NotificationContentTransparency=0.4,NotificationDuration=Color3.fromHex("#a78bfa"),NotificationDurationTransparency=0.95,NotificationBorder=Color3.fromHex("#a78bfa"),NotificationBorderTransparency=0.75,DropdownTabBorder=Color3.fromHex("#a78bfa"),LabelBackground=Color3.fromHex("#ffffff"),LabelBackgroundTransparency=0.95,})local Window=WindUI:CreateWindow({Title="JinHub | Pickaxe Swing Escape",Icon="rbxassetid://75269568091825",Author="Website: jinhub.my.id/topscript",Folder="JinHub Config",Size=UDim2.fromOffset(480,350),MinSize=Vector2.new(480,350),MaxSize=Vector2.new(480,350),Transparent=true,Theme="JHyellow",Resizable=true,SideBarWidth=165,HideSearchBar=true,ScrollBarEnabled=true,NewElements=true,Radius=11,ElementsRadius=9,BackgroundImageTransparency=0.42,Background="rbxassetid://1234",})Window:DisableTopbarButtons({"Fullscreen",})Window:SetIconSize(53)local Players=game:GetService("Players")local VirtualUser=game:GetService("VirtualUser")local LocalPlayer=Players.LocalPlayer
+local Connection
+local function AntiAfk()if Connection then
+Connection:Disconnect()end
+Connection=LocalPlayer.Idled:Connect(function()pcall(function()VirtualUser:CaptureController()VirtualUser:ClickButton2(Vector2.new(0,0))end)end)end
+AntiAfk()LocalPlayer.CharacterAdded:Connect(function()task.wait(300)AntiAfk()end)print("~Thanks For Use JinHub Script~")local CoreGui=game:GetService("CoreGui")local UserInputService=game:GetService("UserInputService")local gui=Instance.new("ScreenGui")gui.Name="JinHubXMenuGUI"
+gui.IgnoreGuiInset=true
+gui.ResetOnSpawn=false
+gui.Parent=CoreGui
+local button=Instance.new("ImageButton")button.Size=UDim2.new(0,44,0,44)button.Name="JinHubXToggle"
+button.BackgroundColor3=Color3.fromRGB(13,13,13)button.Image="rbxassetid://75269568091825"
+button.AutoButtonColor=true
+button.Parent=gui
+local corner=Instance.new("UICorner",button)corner.CornerRadius=UDim.new(0,6)local stroke=Instance.new("UIStroke")stroke.Thickness=1.3
+stroke.Color=Color3.fromHex("#a78bfa")stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+stroke.Parent=button
+local gradient=Instance.new("UIGradient")gradient.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(158,124,249)),ColorSequenceKeypoint.new(1,Color3.fromRGB(201,75,241)),})gradient.Rotation=45
+gradient.Parent=stroke
+local BTN_SIZE=44
+local TOP_PADDING=45
+local function setDefaultPosition()button.Position=UDim2.new(0.5,-(BTN_SIZE/2),0,TOP_PADDING)end
+setDefaultPosition()workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(setDefaultPosition)local dragging=false
+local dragInput=nil
+local dragStart=nil
+local startPos=nil
+local function clampPosition(px,py)local screenSize=workspace.CurrentCamera.ViewportSize
+px=math.clamp(px,0,screenSize.X-BTN_SIZE)py=math.clamp(py,0,screenSize.Y-BTN_SIZE)return UDim2.new(0,px,0,py)end
+button.InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+dragging=true
+dragStart=input.Position
+startPos=button.Position
+input.Changed:Connect(function()if input.UserInputState==Enum.UserInputState.End then
+dragging=false
+end
+end)end
+end)button.InputChanged:Connect(function(input)if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then
+dragInput=input
+end
+end)UserInputService.InputChanged:Connect(function(input)if input==dragInput and dragging then
+local screenSize=workspace.CurrentCamera.ViewportSize
+local delta=input.Position-dragStart
+local px=startPos.X.Scale*screenSize.X+startPos.X.Offset+delta.X
+local py=startPos.Y.Scale*screenSize.Y+startPos.Y.Offset+delta.Y
+button.Position=clampPosition(px,py)end
+end)local opened=true
+button.MouseButton1Click:Connect(function()if opened then
+opened=false
+pcall(function()Window:Close()end)else
+opened=true
+pcall(function()Window:Open()end)end
+end)Window:OnDestroy(function()gui:Destroy()end)Window:Tag({Title="v1.0.1",Color=Color3.fromHex("#a78bfa")})InfoTab=Window:Tab({Title="Local",Icon="solar:home-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})MainTab=Window:Tab({Title="Main",Icon="users-round",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})MiscTab=Window:Tab({Title="Misc",Icon="sparkles",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})ShopTab=Window:Tab({Title="Rebirth",Icon="repeat",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})Window:Divider()UtilityTab=Window:Tab({Title="Utility",Icon="solar:checklist-minimalistic-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,})ConfigTab=Window:Tab({Title="Config",Icon="solar:folder-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})local Players=game:GetService("Players")local RunService=game:GetService("RunService")local LocalPlayer=Players.LocalPlayer
+local MyGen=(getgenv().AutoDetectorGen or 0)+1
+getgenv().AutoDetectorGen=MyGen
+local function IsCurrentGen()return getgenv().AutoDetectorGen==MyGen
+end
+local function findClassTable(className)for _,obj in ipairs(getgc(true))do
+if type(obj)=="table" then
+local ok,mt=pcall(getmetatable,obj)if ok and type(mt)=="table" and rawget(mt,"__tostring")then
+local ok2,str=pcall(tostring,obj)if ok2 and str==className then
+if rawget(obj,"new")~=nil then
+return obj
+end
+end
+end
+end
+end
+return nil
+end
+local function findInstanceOf(classTable,sanityField)if not classTable then
+return nil
+end
+for _,obj in ipairs(getgc(true))do
+if type(obj)=="table" and obj~=classTable then
+local ok,mt=pcall(getmetatable,obj)if ok and mt==classTable then
+if not sanityField or rawget(obj,sanityField)~=nil then
+return obj
+end
+end
+end
+end
+return nil
+end
+local function findTableWithKeys(keys)for _,obj in ipairs(getgc(true))do
+if type(obj)=="table" then
+local matches=true
+for _,k in ipairs(keys)do
+if rawget(obj,k)==nil then
+matches=false
+break
+end
+end
+if matches then
+return obj
+end
+end
+end
+return nil
+end
+local DigControllerClass=findClassTable("DigController")local SurfacedItemControllerClass=findClassTable("SurfacedItemController")local digInst=nil
+local sweepInst=nil
+local surfacedItemInst=nil
+local DetectorEvents=nil
+local ShovelEvents=nil
+local ShovelFunctions=nil
+local function ensureAllResolved()if not digInst then
+digInst=findInstanceOf(DigControllerClass,"affordNotification")if digInst then
+sweepInst=digInst.sweep
+end
+end
+if not surfacedItemInst then
+surfacedItemInst=findInstanceOf(SurfacedItemControllerClass,"pending")end
+if not DetectorEvents then
+DetectorEvents=findTableWithKeys({"SetDetectorHeld","BuriedNodes"})end
+if not ShovelEvents then
+ShovelEvents=findTableWithKeys({"SetShovelEquipped","DigReady","DigInput"})end
+if not ShovelFunctions then
+ShovelFunctions=findTableWithKeys({"BeginDig","ResolveDig","StopPower"})end
+return digInst~=nil and sweepInst~=nil
+and DetectorEvents~=nil and ShovelEvents~=nil and ShovelFunctions~=nil
+end
+local RARITY_ORDER={"common","uncommon","rare","epic","legendary","mythic","divine","eternal","transcendent",}local function capitalize(s)return s:sub(1,1):upper()..s:sub(2)end
+local RarityLabels={}local RarityDropdownValues={}for _,rarity in ipairs(RARITY_ORDER)do
+local label=capitalize(rarity)table.insert(RarityDropdownValues,label)RarityLabels[label]=rarity
+end
+local AutoDig={}AutoDig.WalkEnabled=false
+AutoDig.DigEnabled=false
+AutoDig.FarmMethod="Walk"
+AutoDig.SelectedRarities={}AutoDig.PrioritizeSurfacedSpawn=false
+local State={DigMaxSeconds=6}local IsDigging=false
+local CurrentDigToken=nil
+local function getCharacter()local char=LocalPlayer.Character
+if not char then
+return nil
+end
+local hrp=char:FindFirstChild("HumanoidRootPart")local hum=char:FindFirstChildOfClass("Humanoid")if not hrp or not hum or hum.Health<=0 then
+return nil
+end
+return char,hum,hrp
+end
+local lastHeldState=nil
+local function EnsureDetectorHeld(value)if not DetectorEvents then return end
+if lastHeldState==value then return end
+lastHeldState=value
+pcall(function()DetectorEvents.SetDetectorHeld:fire(value)end)end
+local function nodePassesRarityFilter(node)if next(AutoDig.SelectedRarities)==nil then
+return true
+end
+local rarity=node and node.rarity
+if not rarity then
+return true
+end
+return AutoDig.SelectedRarities[rarity]==true
+end
+local function nearestKnownNode(position)local best,bestDist=nil,nil
+for _,node in pairs(sweepInst.nodes)do
+if nodePassesRarityFilter(node)then
+local dist=(node.position-position).Magnitude
+if not bestDist or dist<bestDist then
+best=node
+bestDist=dist
+end
+end
+end
+return best,bestDist
+end
+local function findReadyDigSpot(hrp)local okSpot,spot=pcall(function()return sweepInst:nearestSpot(hrp.Position)end)if okSpot and spot and nodePassesRarityFilter(spot)then
+return "buried",spot
+end
+if surfacedItemInst and next(AutoDig.SelectedRarities)==nil then
+local okReach,isReach=pcall(function()return surfacedItemInst:hasDigSpotNear(hrp.Position)end)if okReach and isReach then
+return "surfaced",true
+end
+end
+return nil,nil
+end
+local function nearestSurfacedSpawn(position)if not surfacedItemInst or not surfacedItemInst.scenes then
+return nil,nil
+end
+local best,bestId,bestDist=nil,nil,nil
+local ok=pcall(function()for id,scene in pairs(surfacedItemInst.scenes)do
+local diggable=scene.retractingAt==nil
+and scene.mound~=nil
+and #scene.mound>0
+if diggable and scene.surfaceCFrame then
+local dist=(scene.surfaceCFrame.Position-position).Magnitude
+if not bestDist or dist<bestDist then
+best=scene
+bestId=id
+bestDist=dist
+end
+end
+end
+end)if not ok or not best then
+return nil,nil
+end
+return{id=bestId,position=best.surfaceCFrame.Position,reach=best.reach or 0,},bestDist
+end
+local function moveToTarget(hrp,hum,targetPos)if AutoDig.FarmMethod=="Teleport" then
+hrp.CFrame=CFrame.new(targetPos+Vector3.new(0,3,0))else
+hum:MoveTo(targetPos)end
+end
+local DIG_PROGRESS_START=0.33
+local DIG_WIN_THRESHOLD=0.985
+local DIG_LOSE_THRESHOLD=0.0574
+local DIG_INPUT_SEND_INTERVAL=0.1
+local VIRTUAL_CLICKS_PER_SECOND=25
+local function DoFullDig(labelId,labelRarity,digId)if IsDigging then return end
+IsDigging=true
+local myDigToken={}CurrentDigToken=myDigToken
+task.delay(State.DigMaxSeconds+8,function()if IsDigging and CurrentDigToken==myDigToken then
+IsDigging=false
+lastHeldState=nil
+end
+end)local overrideConn
+overrideConn=RunService.Heartbeat:Connect(function()pcall(function()DetectorEvents.SetDetectorHeld:fire(false)end)pcall(function()ShovelEvents.SetShovelEquipped:fire(true)end)end)local ok,err=pcall(function()if not ShovelFunctions or not ShovelEvents then
+return
+end
+task.wait(0.25)local beginOk,session=pcall(function()if digId~=nil then
+return ShovelFunctions.BeginDig:invoke(digId):expect()end
+return ShovelFunctions.BeginDig:invoke():expect()end)if not beginOk or not session then
+return
+end
+local sessionId=session.sessionId
+local difficulty=session.difficulty
+if not sessionId or not difficulty then
+return
+end
+local clickPower=difficulty.clickPower
+local decay=difficulty.decay
+local progress=DIG_PROGRESS_START
+local totalClicks=0
+local lastInputSent=os.clock()local lastFrame=os.clock()local success=false
+local deadline=os.clock()+State.DigMaxSeconds
+while os.clock()<deadline do
+local now=os.clock()local dt=now-lastFrame
+lastFrame=now
+progress=math.max(0,progress-decay*dt)local clicksThisFrame=math.max(1,math.floor(VIRTUAL_CLICKS_PER_SECOND*dt))for _=1,clicksThisFrame do
+progress=math.min(1,progress+clickPower)totalClicks=totalClicks+1
+end
+if now-lastInputSent>=DIG_INPUT_SEND_INTERVAL then
+lastInputSent=now
+local inputOk=pcall(function()ShovelEvents.DigInput:fire(sessionId,totalClicks)end)if not inputOk then
+break
+end
+end
+if progress>=DIG_WIN_THRESHOLD then
+success=true
+break
+elseif progress<=DIG_LOSE_THRESHOLD then
+success=false
+break
+end
+task.wait()end
+pcall(function()ShovelEvents.DigInput:fire(sessionId,totalClicks)end)local resolveOk,finalResult=pcall(function()return ShovelFunctions.ResolveDig:invoke(sessionId,success,totalClicks):expect()end)if not resolveOk then
+pcall(function()if WindUI then
+WindUI:Notify({Title="Failed Dig",Content="Power shovel is not strong enough.",Icon="shovel",Duration=2.5,})end
+end)return
+end
+if not finalResult then
+pcall(function()if WindUI then
+WindUI:Notify({Title="Failed Dig",Content="Power shovel is not strong enough.",Icon="shovel",Duration=2.5,})end
+end)end
+end)if overrideConn then
+overrideConn:Disconnect()end
+if CurrentDigToken==myDigToken then
+lastHeldState=nil
+task.wait(0.2)IsDigging=false
+end
+end
+local lastStepAt=0
+local STEP_INTERVAL=0.2
+local function AutoDetectorStep()if not(AutoDig.WalkEnabled or AutoDig.DigEnabled)then
+if not IsDigging then
+EnsureDetectorHeld(false)end
+return
+end
+if not ensureAllResolved()then
+return
+end
+if IsDigging then
+return
+end
+local char,hum,hrp=getCharacter()if not hrp then
+return
+end
+EnsureDetectorHeld(true)if AutoDig.PrioritizeSurfacedSpawn then
+local spawnSpot,spawnDist=nearestSurfacedSpawn(hrp.Position)if spawnSpot then
+if spawnDist<=spawnSpot.reach then
+hum:MoveTo(hrp.Position)if AutoDig.DigEnabled then
+task.spawn(DoFullDig,"surfaced-spawn","priority",nil)end
+elseif AutoDig.WalkEnabled then
+moveToTarget(hrp,hum,spawnSpot.position)end
+return
+end
+end
+local kind,spot=findReadyDigSpot(hrp)if kind=="buried" then
+hum:MoveTo(hrp.Position)if AutoDig.DigEnabled then
+task.spawn(DoFullDig,spot.id,spot.rarity,spot.id)end
+return
+elseif kind=="surfaced" then
+hum:MoveTo(hrp.Position)if AutoDig.DigEnabled then
+task.spawn(DoFullDig,"surfaced-item","?",nil)end
+return
+end
+if AutoDig.WalkEnabled then
+local node=nearestKnownNode(hrp.Position)if node then
+moveToTarget(hrp,hum,node.position)end
+end
+end
+local mainHeartbeatConn=nil
+mainHeartbeatConn=RunService.Heartbeat:Connect(function()if not IsCurrentGen()then
+if mainHeartbeatConn then
+mainHeartbeatConn:Disconnect()end
+return
+end
+local now=os.clock()if now-lastStepAt<STEP_INTERVAL then
+return
+end
+lastStepAt=now
+local ok=pcall(AutoDetectorStep)end)function AutoDig:SetWalkEnabled(state)self.WalkEnabled=state
+end
+function AutoDig:SetDigEnabled(state)self.DigEnabled=state
+end
+function AutoDig:SetFarmMethod(method)self.FarmMethod=method
+end
+function AutoDig:SetSelectedRarities(labelList)local set={}for _,label in ipairs(labelList or{})do
+local rarity=RarityLabels[label]if rarity then
+set[rarity]=true
+end
+end
+self.SelectedRarities=set
+end
+MainTab:Section({Title="Auto Farm",Icon="magnet",IconColor=Color3.fromRGB(120,140,255),TextSize=18,Box=false,BoxBorder=true,Opened=false,})MainTab:Dropdown({Title="Metode Farm",Values={"Walk","Teleport"},Value="Walk",Multi=false,Flag="farm_method",Callback=function(selected)AutoDig:SetFarmMethod(selected)end})MainTab:Dropdown({Title="Rarity Filter",Values=RarityDropdownValues,Value={},Multi=true,Flag="rarity_filter",Callback=function(selected)AutoDig:SetSelectedRarities(selected)end})MainTab:Toggle({Title="Auto Dig",Flag="auto_dig",Callback=function(state)AutoDig:SetDigEnabled(state)end})MainTab:Toggle({Title="Auto Detector",Flag="auto_detector",Callback=function(state)AutoDig:SetWalkEnabled(state)end})MainTab:Toggle({Title="Prioritize spawned items.",Flag="auto_detector_prioritize_surfaced_spawn",Callback=function(state)AutoDig.PrioritizeSurfacedSpawn=state
+end})return AutoDig
+local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local CollectionService=game:GetService("CollectionService")local LocalPlayer=Players.LocalPlayer
+getgenv().AutoSpray=getgenv().AutoSpray or{Enabled=false,Delay=0.5,BeginArg=3,SelectedRarities={},}local State=getgenv().AutoSpray
+local RARITY_ORDER={"common","uncommon","rare","epic","legendary","mythic","divine","eternal","transcendent",}local function Capitalize(s)return s:sub(1,1):upper()..s:sub(2)end
+local RarityLabels={}local RarityDropdownValues={}for _,rarity in ipairs(RARITY_ORDER)do
+local label=Capitalize(rarity)table.insert(RarityDropdownValues,label)RarityLabels[label]=rarity
+end
+local Items=nil
+local ItemsResolveFailCount=0
+local function ensureItemsResolved()if Items then
+return true
+end
+if ItemsResolveFailCount>=3 then
+return false
+end
+local okFind,mod=pcall(function()return ReplicatedStorage:WaitForChild("TS",5):WaitForChild("constants",5):WaitForChild("items",5):WaitForChild("Items",5)end)if not okFind or not mod then
+ItemsResolveFailCount+=1
+return false
+end
+local okReq,result=pcall(require,mod)if not okReq or type(result)~="table" then
+ItemsResolveFailCount+=1
+return false
+end
+Items=result.Items or result
+return Items~=nil
+end
+local function GetToolRarity(tool)if not ensureItemsResolved()then
+return nil
+end
+local itemId=tool:GetAttribute("itemId")if type(itemId)~="string" then
+return nil
+end
+local itemData=Items[itemId]if not itemData then
+return nil
+end
+return itemData.rarity
+end
+local function ToolPassesRarityFilter(tool)if next(State.SelectedRarities)==nil then
+return true
+end
+local rarity=GetToolRarity(tool)if not rarity then
+return true
+end
+return State.SelectedRarities[rarity]==true
+end
+local GlobalItemsFunctions=ReplicatedStorage:FindFirstChild("shared/network/ItemsNetwork@GlobalItemsFunctions")local GlobalItemsEvents=ReplicatedStorage:FindFirstChild("shared/network/ItemsNetwork@GlobalItemsEvents")local function IsDirtyTool(tool)if not CollectionService:HasTag(tool,"Dirt")then
+return false
+end
+return tool:GetAttribute("dirty")~=false
+end
+local function GetDirtyTools()local results={}local seen={}local function scan(container)if not container then
+return
+end
+for _,tool in ipairs(container:GetChildren())do
+if tool:IsA("Tool")then
+local inventoryId=tool:GetAttribute("inventoryId")if type(inventoryId)=="string" and inventoryId~="" and not seen[inventoryId]then
+if IsDirtyTool(tool)and ToolPassesRarityFilter(tool)then
+seen[inventoryId]=true
+table.insert(results,{tool=tool,inventoryId=inventoryId})end
+end
+end
+end
+end
+local backpack=LocalPlayer:FindFirstChildOfClass("Backpack")scan(backpack)scan(LocalPlayer.Character)return results
+end
+local function TryClean(inventoryId)if not GlobalItemsFunctions or not GlobalItemsEvents then
+warn("[AutoSpray] Remote container belum ketemu di ReplicatedStorage")return
+end
+local beginRemote=GlobalItemsFunctions:FindFirstChild("beginCleaning")local finishRemote=GlobalItemsEvents:FindFirstChild("finishCleaning")if not beginRemote or not finishRemote then
+return
+end
+local ok=pcall(function()beginRemote:FireServer(State.BeginArg,inventoryId)end)if not ok then
+return
+end
+task.wait(0.2)pcall(function()finishRemote:FireServer(inventoryId)end)end
+task.spawn(function()while true do
+task.wait(State.Delay)if not State.Enabled then
+continue
+end
+local dirtyTools=GetDirtyTools()if #dirtyTools==0 then
+continue
+end
+for _,entry in ipairs(dirtyTools)do
+if not State.Enabled then
+break
+end
+TryClean(entry.inventoryId)task.wait(State.Delay)end
+end
+end)MainTab:Dropdown({Title="Rarity Filter",Values=RarityDropdownValues,Value={},Multi=true,Locked=false,Flag="auto_spray_rarity_filter",Callback=function(selected)local set={}for _,label in ipairs(selected)do
+local rarity=RarityLabels[label]if rarity then
+set[rarity]=true
+end
+end
+State.SelectedRarities=set
+end,})MainTab:Toggle({Title="Auto Cleaning",Desc="Instant Spray",Default=State.Enabled,Flag="auto_spray_toggle",Callback=function(value)State.Enabled=value
+end,})local Players=game:GetService("Players")local RunService=game:GetService("RunService")local ReplicatedStorage=game:GetService("ReplicatedStorage")local LocalPlayer=Players.LocalPlayer
+if _G.__AutoSellInstance then
+pcall(function()_G.__AutoSellInstance:Stop()end)_G.__AutoSellInstance=nil
+end
+local RARITY_ORDER={"common","uncommon","rare","epic","legendary","mythic","divine","eternal","transcendent",}local function safeWaitForChild(parent,name,timeout)if not parent then
+return nil
+end
+local ok,child=pcall(function()return parent:WaitForChild(name,timeout or 3)end)if ok then
+return child
+end
+return nil
+end
+do
+local playerScripts=safeWaitForChild(LocalPlayer,"PlayerScripts",3)local ts=safeWaitForChild(playerScripts,"TS",3)local constants=safeWaitForChild(ts,"constants",3)local ui=safeWaitForChild(constants,"ui",3)local rarityStylesModule=safeWaitForChild(ui,"RarityStyles",3)if rarityStylesModule then
+local ok,mod=pcall(require,rarityStylesModule)if ok and mod and mod.RARITY_ORDER then
+RARITY_ORDER=mod.RARITY_ORDER
+end
+end
+end
+local function capitalize(s)return s:sub(1,1):upper()..s:sub(2)end
+local RarityLabels={}local RarityDropdownValues={}for _,rarity in ipairs(RARITY_ORDER)do
+local label=capitalize(rarity)table.insert(RarityDropdownValues,label)RarityLabels[label]=rarity
+end
+local Items=nil
+do
+local ts=safeWaitForChild(ReplicatedStorage,"TS",3)local constants=safeWaitForChild(ts,"constants",3)local itemsFolder=safeWaitForChild(constants,"items",3)local itemsModule=safeWaitForChild(itemsFolder,"Items",3)if itemsModule then
+local ok,mod=pcall(require,itemsModule)if ok and mod then
+Items=mod.Items
+end
+end
+end
+local SellFunctions=nil
+local function ensureSellNetwork()if SellFunctions then
+return true
+end
+local containers={}local playerScripts=safeWaitForChild(LocalPlayer,"PlayerScripts",3)local psTS=safeWaitForChild(playerScripts,"TS",3)if psTS then
+table.insert(containers,psTS)end
+local rsTS=safeWaitForChild(ReplicatedStorage,"TS",3)if rsTS then
+table.insert(containers,rsTS)end
+for _,container in ipairs(containers)do
+local network=safeWaitForChild(container,"network",3)local sellNetworkModule=safeWaitForChild(network,"SellNetwork",3)if sellNetworkModule then
+local ok,mod=pcall(require,sellNetworkModule)if ok and mod and mod.SellFunctions then
+SellFunctions=mod.SellFunctions
+return true
+end
+end
+end
+return false
+end
+local function findClassTable(className)for _,obj in ipairs(getgc(true))do
+if type(obj)=="table" then
+local ok,mt=pcall(getmetatable,obj)if ok and type(mt)=="table" and rawget(mt,"__tostring")then
+local ok2,str=pcall(tostring,obj)if ok2 and str==className then
+if rawget(obj,"new")~=nil then
+return obj
+end
+end
+end
+end
+end
+return nil
+end
+local function findInstanceOf(classTable,sanityField)if not classTable then
+return nil
+end
+for _,obj in ipairs(getgc(true))do
+if type(obj)=="table" and obj~=classTable then
+local ok,mt=pcall(getmetatable,obj)if ok and mt==classTable then
+if not sanityField or rawget(obj,sanityField)~=nil then
+return obj
+end
+end
+end
+end
+return nil
+end
+local DataControllerClass=findClassTable("DataController")local dataInst=nil
+local function ensureDataInstance()if not dataInst then
+dataInst=findInstanceOf(DataControllerClass,nil)end
+return dataInst~=nil
+end
+local function getInventory()if not ensureDataInstance()then
+return nil
+end
+local ok,data=pcall(function()return dataInst:getDataIfLoaded()end)if not ok or not data then
+return nil
+end
+return data.Inventory
+end
+local function getInventoryCount()local inventory=getInventory()if not inventory then
+return 0
+end
+local count=0
+for _,entry in pairs(inventory)do
+if entry.pedestalSlot==nil and entry.polisherSlot==nil then
+count=count+1
+end
+end
+return count
+end
+local NPC_NEAR_DISTANCE=5
+local NPC_TP_OFFSET=Vector3.new(3,0,0)local getStarterIslandFn=nil
+local function resolveGetStarterIsland()if getStarterIslandFn then
+return true
+end
+local ts=safeWaitForChild(ReplicatedStorage,"TS",3)local utils=safeWaitForChild(ts,"utils",3)local world=safeWaitForChild(utils,"world",3)local mod=safeWaitForChild(world,"getStarterIsland",3)if not mod then
+return false
+end
+local ok,required=pcall(require,mod)if ok and required and required.getStarterIsland then
+getStarterIslandFn=required.getStarterIsland
+return true
+end
+return false
+end
+local npcRoot=nil
+local function ensureNpcRoot()if npcRoot and npcRoot.Parent then
+return npcRoot
+end
+if not resolveGetStarterIsland()then
+return nil
+end
+local ok,island=pcall(getStarterIslandFn)if not ok or not island then
+return nil
+end
+local npcs=safeWaitForChild(island,"NPCs",3)local sell=safeWaitForChild(npcs,"Sell",3)local sellerNpc=safeWaitForChild(sell,"SellerNPC",3)local hrp=safeWaitForChild(sellerNpc,"HumanoidRootPart",3)npcRoot=hrp
+return npcRoot
+end
+local function isNearNpc(playerHrp)local root=ensureNpcRoot()if not root or not playerHrp then
+return false
+end
+return(playerHrp.Position-root.Position).Magnitude<=NPC_NEAR_DISTANCE
+end
+local function teleportToNpc(playerHrp)local root=ensureNpcRoot()if not root or not playerHrp then
+return false
+end
+playerHrp.CFrame=CFrame.new(root.Position+NPC_TP_OFFSET)return true
+end
+local AutoSell={}AutoSell.SellByRarityEnabled=false
+AutoSell.SellAllEnabled=false
+AutoSell.SelectedRarities={}AutoSell.SellTriggerCount=50
+local heartbeatConn=nil
+local sellBusy=false
+local needsRetp=false
+local SELL_LOOP_INTERVAL=1.5
+local PER_ITEM_EQUIP_WAIT=0.5
+local PER_ITEM_COOLDOWN=0.5
+local SELL_MAX_RETRIES=4
+local SELL_RETRY_DELAY=0.3
+local function anyEnabled()return AutoSell.SellByRarityEnabled or AutoSell.SellAllEnabled
+end
+local function entryPassesFilter(entry)if not entry then
+return false
+end
+if entry.pedestalSlot~=nil or entry.polisherSlot~=nil then
+return false
+end
+if next(AutoSell.SelectedRarities)==nil then
+return false
+end
+if not Items or not entry.id or not Items[entry.id]then
+return false
+end
+local rarity=Items[entry.id].rarity
+return AutoSell.SelectedRarities[rarity]==true
+end
+local function findToolForEntry(entry)local char=LocalPlayer.Character
+local backpack=LocalPlayer:FindFirstChild("Backpack")local containers={}if char then
+table.insert(containers,char)end
+if backpack then
+table.insert(containers,backpack)end
+for _,container in ipairs(containers)do
+for _,inst in ipairs(container:GetChildren())do
+if inst:IsA("Tool")and inst:GetAttribute("inventoryId")==entry.uid then
+return inst
+end
+end
+end
+return nil
+end
+local function sellOneEntry(entry)local char=LocalPlayer.Character
+local hum=char and char:FindFirstChildOfClass("Humanoid")if not hum then
+return false
+end
+local tool=findToolForEntry(entry)if not tool then
+needsRetp=true
+return false
+end
+for attempt=1,SELL_MAX_RETRIES do
+if not tool.Parent then
+needsRetp=true
+return false
+end
+local equipOk=pcall(function()hum:EquipTool(tool)end)if not equipOk then
+return false
+end
+task.wait(PER_ITEM_EQUIP_WAIT)local invokeOk,result=pcall(function()return SellFunctions.sellHeldItem:invoke()end)if invokeOk and result~=nil then
+return true
+end
+if attempt<SELL_MAX_RETRIES then
+task.wait(SELL_RETRY_DELAY)end
+end
+return false
+end
+local function sellAllAtOnce()pcall(function()SellFunctions.sellInventory:invoke()end)end
+local function sellFilteredOneByOne()local inventory=getInventory()if not inventory then
+return
+end
+for _,entry in ipairs(inventory)do
+if not AutoSell.SellByRarityEnabled then
+break
+end
+if entryPassesFilter(entry)then
+sellOneEntry(entry)task.wait(PER_ITEM_COOLDOWN)end
+end
+end
+local function step()if not anyEnabled()or sellBusy then
+return
+end
+if not ensureSellNetwork()then
+return
+end
+sellBusy=true
+task.spawn(function()if AutoSell.SellAllEnabled then
+sellAllAtOnce()task.wait(PER_ITEM_COOLDOWN)end
+if AutoSell.SellByRarityEnabled and next(AutoSell.SelectedRarities)~=nil then
+sellFilteredOneByOne()end
+sellBusy=false
+end)end
+local lastRun=0
+local function heartbeatStep()if not anyEnabled()then
+return
+end
+if getInventoryCount()~=AutoSell.SellTriggerCount then
+return
+end
+local char=LocalPlayer.Character
+local hrp=char and char:FindFirstChild("HumanoidRootPart")if hrp then
+if not isNearNpc(hrp)or needsRetp then
+needsRetp=false
+teleportToNpc(hrp)lastRun=os.clock()return
+end
+end
+local now=os.clock()if now-lastRun<SELL_LOOP_INTERVAL then
+return
+end
+lastRun=now
+step()end
+function AutoSell:Start()if heartbeatConn then
+return
+end
+lastRun=0
+heartbeatConn=RunService.Heartbeat:Connect(heartbeatStep)end
+function AutoSell:Stop()if heartbeatConn then
+heartbeatConn:Disconnect()heartbeatConn=nil
+end
+end
+local function refreshRunning()if anyEnabled()then
+AutoSell:Start()else
+AutoSell:Stop()end
+end
+function AutoSell:SetSellByRarityEnabled(state)self.SellByRarityEnabled=state
+refreshRunning()end
+function AutoSell:SetSellAllEnabled(state)self.SellAllEnabled=state
+refreshRunning()end
+function AutoSell:SetSelectedRarities(labelList)local set={}for _,label in ipairs(labelList or{})do
+local rarity=RarityLabels[label]if rarity then
+set[rarity]=true
+end
+end
+self.SelectedRarities=set
+end
+function AutoSell:SetSellTriggerCount(value)self.SellTriggerCount=value
+end
+ShopTab:Dropdown({Title="Rarity Filter",Values=RarityDropdownValues,Value={},Multi=true,Flag="sell_rarity_filter",Callback=function(selected)AutoSell:SetSelectedRarities(selected)end})ShopTab:Slider({Title="Backpack Count",Value={Min=5,Max=50,Default=50},Step=1,Flag="sell_trigger_count",Callback=function(value)AutoSell:SetSellTriggerCount(value)end})ShopTab:Toggle({Title="Auto Sell By Rarity",Flag="auto_sell_rarity",Default=false,Callback=function(state)AutoSell:SetSellByRarityEnabled(state)end})ShopTab:Toggle({Title="Auto Sell All Item Inventory",Flag="auto_sell_all",Default=false,Callback=function(state)AutoSell:SetSellAllEnabled(state)end})_G.__AutoSellInstance=AutoSell
+return AutoSell
+local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local LocalPlayer=Players.LocalPlayer
+local ShopFunctions=nil
+local DataFunctions=nil
+local Shovels=nil
+local Detectors=nil
+local SprayBottles=nil
+local getIslandsFolder=nil
+local formatAbbrevMoney=nil
+do
+local PlayerScripts=LocalPlayer:WaitForChild("PlayerScripts")local TSFolder=PlayerScripts:WaitForChild("TS")local NetworkFolder=TSFolder:WaitForChild("network")local okShop,shopMod=pcall(function()return require(NetworkFolder:WaitForChild("ShopNetwork"))end)if okShop and shopMod then
+ShopFunctions=shopMod.ShopFunctions
+end
+local okData,dataMod=pcall(function()return require(NetworkFolder:WaitForChild("DataNetwork"))end)if okData and dataMod then
+DataFunctions=dataMod.DataFunctions
+end
+local ConstantsFolder=ReplicatedStorage:WaitForChild("TS"):WaitForChild("constants")local okShovels,shovelsMod=pcall(function()return require(ConstantsFolder:WaitForChild("digging"):WaitForChild("Shovels"))end)if okShovels and shovelsMod then
+Shovels=shovelsMod.Shovels
+else
+end
+local okDetectors,detectorsMod=pcall(function()return require(ConstantsFolder:WaitForChild("digging"):WaitForChild("Detectors"))end)if okDetectors and detectorsMod then
+Detectors=detectorsMod.Detectors
+else
+end
+local okSprays,spraysMod=pcall(function()return require(ConstantsFolder:WaitForChild("cleaning"):WaitForChild("SprayBottles"))end)if okSprays and spraysMod then
+SprayBottles=spraysMod.SprayBottles
+else
+end
+local UtilsFolder=ReplicatedStorage:WaitForChild("TS"):WaitForChild("utils")local okIslands,islandsMod=pcall(function()return require(UtilsFolder:WaitForChild("world"):WaitForChild("getStarterIsland"))end)if okIslands and islandsMod then
+getIslandsFolder=islandsMod.getIslandsFolder
+else
+end
+local okFormat,formatMod=pcall(function()return require(UtilsFolder:WaitForChild("formatting"):WaitForChild("formatAbbrevMoney"))end)if okFormat and formatMod then
+formatAbbrevMoney=formatMod.formatAbbrevMoney
+else
+end
+end
+if not ShopFunctions then
+return
+end
+if not DataFunctions then
+end
+local PlayerData=nil
+local DATA_REFRESH_INTERVAL=3
+local function refreshPlayerData()if not DataFunctions then
+return
+end
+local ok,result=pcall(function()return DataFunctions.requestDataUpdate:invoke()end)if ok and result then
+PlayerData=result
+end
+end
+if DataFunctions then
+task.spawn(function()for _=1,10 do
+refreshPlayerData()if PlayerData then
+break
+end
+task.wait(0.5)end
+end)task.spawn(function()while true do
+task.wait(DATA_REFRESH_INTERVAL)refreshPlayerData()end
+end)end
+local function isOwned(category,id)if not PlayerData then
+return false
+end
+local list
+if category=="shovel" then
+list=PlayerData.OwnedShovels
+elseif category=="spray" then
+list=PlayerData.OwnedSprays
+else
+list=PlayerData.OwnedDetectors
+end
+if not list then
+return false
+end
+return table.find(list,id)~=nil
+end
+local function formatPrice(cost)if formatAbbrevMoney then
+local ok,formatted=pcall(formatAbbrevMoney,cost)if ok and formatted then
+return formatted
+end
+end
+return tostring(cost)end
+local function buildBuyableItems(sourceTable)local items={}local labelToId={}if not sourceTable then
+return items,labelToId
+end
+for id,def in pairs(sourceTable)do
+if def.cost and def.cost~=0 then
+table.insert(items,{id=id,displayName=def.displayName or id,cost=def.cost})end
+end
+table.sort(items,function(a,b)if a.cost~=b.cost then
+return a.cost<b.cost
+end
+return a.displayName<b.displayName
+end)local labels={}for _,item in ipairs(items)do
+local label=("%s | %s"):format(item.displayName,formatPrice(item.cost))table.insert(labels,label)labelToId[label]=item.id
+end
+return labels,labelToId
+end
+local ShovelLabels,ShovelLabelToId=buildBuyableItems(Shovels)local DetectorLabels,DetectorLabelToId=buildBuyableItems(Detectors)local SprayLabels,SprayLabelToId=buildBuyableItems(SprayBottles)local CATEGORY_CONTAINER={shovel="BuyShovels",detector="BuyDetectors",spray="Sprays",}local function getDisplayName(category,id)if category=="shovel" then
+return Shovels and Shovels[id]and Shovels[id].displayName
+elseif category=="detector" then
+return Detectors and Detectors[id]and Detectors[id].displayName
+else
+return SprayBottles and SprayBottles[id]and SprayBottles[id].displayName
+end
+end
+local ModelCache={}local function findGearModel(category,id)local cacheKey=category.."/"..tostring(id)local cached=ModelCache[cacheKey]if cached and cached.Parent then
+return cached
+end
+if not getIslandsFolder then
+return nil
+end
+local displayName=getDisplayName(category,id)local containerName=CATEGORY_CONTAINER[category]if not displayName or not containerName then
+return nil
+end
+local ok,islandsFolder=pcall(getIslandsFolder)if not ok or not islandsFolder then
+return nil
+end
+for _,island in ipairs(islandsFolder:GetChildren())do
+local npcs=island:FindFirstChild("NPCs")local gear=npcs and npcs:FindFirstChild("Gear")local container=gear and gear:FindFirstChild(containerName)if container then
+local model=container:FindFirstChild(displayName,true)if model and model:IsA("Model")then
+ModelCache[cacheKey]=model
+return model
+end
+end
+end
+return nil
+end
+local function GetRoot()local Character=LocalPlayer.Character
+if not Character then
+return nil
+end
+return Character:FindFirstChild("HumanoidRootPart")end
+local MODEL_APPROACH_OFFSET=Vector3.new(0,3,3)local function teleportToGearModel(category,id)local model=findGearModel(category,id)if not model then
+return false
+end
+local rootPart=GetRoot()if not rootPart then
+return false
+end
+local pivot=model:GetPivot()rootPart.CFrame=CFrame.new(pivot.Position+MODEL_APPROACH_OFFSET,pivot.Position)task.wait(0.2)return true
+end
+local DELAY_BETWEEN_ATTEMPTS=1.5
+local function makeAutoBuyer(category,labelToId)local state={Enabled=false,SelectedLabels={},BoughtCache={},}task.spawn(function()while true do
+task.wait(DELAY_BETWEEN_ATTEMPTS)if not state.Enabled then
+continue
+end
+if #state.SelectedLabels==0 then
+continue
+end
+for _,label in ipairs(state.SelectedLabels)do
+if not state.Enabled then
+break
+end
+local id=labelToId[label]local alreadyOwned=isOwned(category,id)or state.BoughtCache[id]if id and not alreadyOwned then
+teleportToGearModel(category,id)local ok,promiseResult=pcall(function()return ShopFunctions.buyGear:invoke(category,id):catch(function()return false
+end):expect()end)if ok and promiseResult==true then
+state.BoughtCache[id]=true
+print("[AutoBuyGear] Berhasil beli "..category..": "..label)task.spawn(refreshPlayerData)end
+task.wait(0.3)end
+end
+end
+end)return state
+end
+local ShovelBuyer=makeAutoBuyer("shovel",ShovelLabelToId)local DetectorBuyer=makeAutoBuyer("detector",DetectorLabelToId)local SprayBuyer=makeAutoBuyer("spray",SprayLabelToId)ShopTab:Section({Title="Gear Detector",Icon="magnet",IconColor=Color3.fromRGB(120,140,255),TextSize=18,Box=false,BoxBorder=true,Opened=false,})ShopTab:Dropdown({Title="Detector List",Values=DetectorLabels,Value={},Multi=true,Locked=false,Flag="auto_buy_detector_list",Callback=function(selected)DetectorBuyer.SelectedLabels=selected
+end,})ShopTab:Toggle({Title="Auto Buy Detector",Flag="auto_buy_detector_toggle",Default=false,Callback=function(v)DetectorBuyer.Enabled=v
+end,})ShopTab:Divider()ShopTab:Section({Title="Gear Shovel",Icon="shovel",IconColor=Color3.fromRGB(120,140,255),TextSize=18,Box=false,BoxBorder=true,Opened=false,})ShopTab:Dropdown({Title="Shovel List",Values=ShovelLabels,Value={},Multi=true,Locked=false,Flag="auto_buy_shovel_list",Callback=function(selected)ShovelBuyer.SelectedLabels=selected
+end,})ShopTab:Toggle({Title="Auto Buy Shovel",Flag="auto_buy_shovel_toggle",Default=false,Callback=function(v)ShovelBuyer.Enabled=v
+end,})ShopTab:Divider()ShopTab:Section({Title="Gear Spray",Icon="spray-can",IconColor=Color3.fromRGB(120,140,255),TextSize=18,Box=false,BoxBorder=true,Opened=false,})ShopTab:Dropdown({Title="Spray List",Values=SprayLabels,Value={},Multi=true,Locked=false,Flag="auto_buy_spray_list",Callback=function(selected)SprayBuyer.SelectedLabels=selected
+end,})ShopTab:Toggle({Title="Auto Buy Spray",Flag="auto_buy_spray_toggle",Default=false,Callback=function(v)SprayBuyer.Enabled=v
+end,})MiscTab:Section({Title="Auto Place",Icon="arrow-down-to-line",IconColor=Color3.fromRGB(120,140,255),TextSize=18,Box=false,BoxBorder=true,Opened=false,})local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local Workspace=game:GetService("Workspace")local LocalPlayer=Players.LocalPlayer
+getgenv().AutoPedestalManager=getgenv().AutoPedestalManager or{Enabled=false,Delay=0.5,PlaceArg=0,PickupArg=1,ToolWeightAttribute="kg",SelectedRarities={},}local State=getgenv().AutoPedestalManager
+local RARITY_ORDER={"common","uncommon","rare","epic","legendary","mythic","divine","eternal","transcendent",}local function Capitalize(s)return s:sub(1,1):upper()..s:sub(2)end
+local RarityLabels={}local RarityDropdownValues={}local RarityIndex={}for i,rarity in ipairs(RARITY_ORDER)do
+local label=Capitalize(rarity)table.insert(RarityDropdownValues,label)RarityLabels[label]=rarity
+RarityIndex[rarity]=i
+end
+local Items=nil
+local ItemsResolveFailCount=0
+local function ensureItemsResolved()if Items then
+return true
+end
+if ItemsResolveFailCount>=3 then
+return false
+end
+local okFind,mod=pcall(function()return ReplicatedStorage:WaitForChild("TS",5):WaitForChild("constants",5):WaitForChild("items",5):WaitForChild("Items",5)end)if not okFind or not mod then
+ItemsResolveFailCount+=1
+return false
+end
+local okReq,result=pcall(require,mod)if not okReq or type(result)~="table" then
+ItemsResolveFailCount+=1
+return false
+end
+Items=result.Items or result
+return Items~=nil
+end
+local function GetItemRarity(itemId)if not ensureItemsResolved()then
+return nil
+end
+if type(itemId)~="string" then
+return nil
+end
+local itemData=Items[itemId]if not itemData then
+return nil
+end
+return itemData.rarity
+end
+local function RarityPassesFilter(rarity)if next(State.SelectedRarities)==nil then
+return true
+end
+if not rarity then
+return false
+end
+return State.SelectedRarities[rarity]==true
+end
+local function IsStronger(rarityIndexA,kgA,rarityIndexB,kgB)if rarityIndexA~=rarityIndexB then
+return rarityIndexA>rarityIndexB
+end
+return kgA>kgB
+end
+local function GetOwnPlot()local Plots=Workspace:FindFirstChild("Plots")if not Plots then
+return nil
+end
+for _,plot in ipairs(Plots:GetChildren())do
+if plot:IsA("Model")and plot:GetAttribute("OwnerUserId")==LocalPlayer.UserId then
+return plot
+end
+end
+return nil
+end
+local function GetPedestals(plot)local inner=plot:FindFirstChild("Plot")local pedestalsFolder=inner and inner:FindFirstChild("Pedestals")if not pedestalsFolder then
+return{}end
+return pedestalsFolder:GetChildren()end
+local function GetPedestalStates()local plot=GetOwnPlot()if not plot then
+return{}end
+local states={}for _,pedestal in ipairs(GetPedestals(plot))do
+if pedestal:IsA("Model")then
+local slot=pedestal:GetAttribute("Slot")local itemId=pedestal:GetAttribute("ItemId")local itemUid=pedestal:GetAttribute("ItemUid")local kg=pedestal:GetAttribute("Kg")if type(slot)=="number" then
+local isEmpty=(itemId==nil or itemId=="")local rarityIndex=0
+if not isEmpty then
+local rarity=GetItemRarity(itemId)rarityIndex=(rarity and RarityIndex[rarity])or 0
+end
+table.insert(states,{pedestal=pedestal,slot=slot,isEmpty=isEmpty,itemUid=(not isEmpty and itemUid)or nil,rarityIndex=rarityIndex,kg=(not isEmpty and type(kg)=="number" and kg)or 0,})end
+end
+end
+return states
+end
+local function GetCandidateTools(placedUids)local results={}local seen={}local function scan(container)if not container then
+return
+end
+for _,tool in ipairs(container:GetChildren())do
+if tool:IsA("Tool")then
+local inventoryId=tool:GetAttribute("inventoryId")if type(inventoryId)=="string" and inventoryId~=""
+and not seen[inventoryId]and not placedUids[inventoryId]then
+if tool:GetAttribute("dirty")==false then
+local itemId=tool:GetAttribute("itemId")local rarity=GetItemRarity(itemId)if rarity and RarityPassesFilter(rarity)then
+seen[inventoryId]=true
+local kg=tool:GetAttribute(State.ToolWeightAttribute)table.insert(results,{tool=tool,inventoryId=inventoryId,rarityIndex=RarityIndex[rarity],kg=(type(kg)=="number" and kg)or 0,})end
+end
+end
+end
+end
+end
+local backpack=LocalPlayer:FindFirstChildOfClass("Backpack")scan(backpack)scan(LocalPlayer.Character)return results
+end
+local PedestalFunctions=ReplicatedStorage:FindFirstChild("shared/network/PedestalNetwork@GlobalPedestalFunctions")local function TryPlace(slot,inventoryId)if not PedestalFunctions then
+warn("[AutoPedestalManager] GlobalPedestalFunctions gak ketemu")return false
+end
+local placeItemRemote=PedestalFunctions:FindFirstChild("placeItem")if not placeItemRemote then
+warn("[AutoPedestalManager] placeItem remote gak ketemu")return false
+end
+local ok=pcall(function()placeItemRemote:FireServer(State.PlaceArg,slot,inventoryId)end)return ok
+end
+local function TryPickup(slot)if not PedestalFunctions then
+warn("[AutoPedestalManager] GlobalPedestalFunctions gak ketemu")return false
+end
+local pickupItemRemote=PedestalFunctions:FindFirstChild("pickupItem")if not pickupItemRemote then
+warn("[AutoPedestalManager] pickupItem remote gak ketemu")return false
+end
+local ok=pcall(function()pickupItemRemote:FireServer(State.PickupArg,slot)end)return ok
+end
+task.spawn(function()while true do
+task.wait(State.Delay)if not State.Enabled then
+continue
+end
+local pedestalStates=GetPedestalStates()if #pedestalStates==0 then
+continue
+end
+table.sort(pedestalStates,function(a,b)if a.rarityIndex~=b.rarityIndex then
+return a.rarityIndex<b.rarityIndex
+end
+return a.kg<b.kg
+end)local placedUids={}for _,state in ipairs(pedestalStates)do
+if state.itemUid then
+placedUids[state.itemUid]=true
+end
+end
+local candidates=GetCandidateTools(placedUids)if #candidates==0 then
+continue
+end
+table.sort(candidates,function(a,b)if a.rarityIndex~=b.rarityIndex then
+return a.rarityIndex>b.rarityIndex
+end
+return a.kg>b.kg
+end)local candidateIdx=1
+for _,state in ipairs(pedestalStates)do
+if not State.Enabled then
+break
+end
+local candidate=candidates[candidateIdx]if not candidate then
+break
+end
+local candidateIsStronger=IsStronger(candidate.rarityIndex,candidate.kg,state.rarityIndex,state.kg)if not candidateIsStronger then
+break
+end
+if not state.isEmpty then
+TryPickup(state.slot)task.wait(0.2)end
+TryPlace(state.slot,candidate.inventoryId)candidateIdx+=1
+task.wait(State.Delay)end
+end
+end)MiscTab:Dropdown({Title="Rarity Filter",Values=RarityDropdownValues,Value={},Multi=true,Locked=false,Flag="auto_pedestal_manager_rarity_filter",Callback=function(selected)local set={}for _,label in ipairs(selected)do
+local rarity=RarityLabels[label]if rarity then
+set[rarity]=true
+end
+end
+State.SelectedRarities=set
+end,})MiscTab:Toggle({Title="Auto Plce Item",Desc="automatically place best item by rarity & kg",Default=State.Enabled,Flag="auto_pedestal_manager_toggle",Callback=function(value)State.Enabled=value
+end,})
