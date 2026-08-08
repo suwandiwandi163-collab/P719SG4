@@ -49,7 +49,7 @@ opened=false
 pcall(function()Window:Close()end)else
 opened=true
 pcall(function()Window:Open()end)end
-end)Window:OnDestroy(function()gui:Destroy()end)Window:Tag({Title="Paid-1.4",Color=Color3.fromHex("#a78bfa")})BoothTab=Window:Tab({Title="Booth Info",Icon="users-round",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})TradingTab=Window:Tab({Title="Trading",Icon="rbxassetid://101138031615428",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})Window:Divider()ConfigTab=Window:Tab({Title="Config",Icon="solar:folder-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local TradingBoothCmds=require(ReplicatedStorage.Framework.Client.TradingBoothCmds)local ItemDirectory=require(ReplicatedStorage.Framework.Directory.Item)local PetDirectory=require(ReplicatedStorage.Framework.Directory.Pet)local MAX_BOOTH_PARAGRAPHS=6
+end)Window:OnDestroy(function()gui:Destroy()end)Window:Tag({Title="Paid-1.5",Color=Color3.fromHex("#a78bfa")})BoothTab=Window:Tab({Title="Booth Info",Icon="users-round",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})TradingTab=Window:Tab({Title="Trading",Icon="rbxassetid://101138031615428",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})Window:Divider()ConfigTab=Window:Tab({Title="Config",Icon="solar:folder-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local TradingBoothCmds=require(ReplicatedStorage.Framework.Client.TradingBoothCmds)local ItemDirectory=require(ReplicatedStorage.Framework.Directory.Item)local PetDirectory=require(ReplicatedStorage.Framework.Directory.Pet)local MAX_BOOTH_PARAGRAPHS=6
 local BoothParagraphs={}local ListingConns={}local EmptyStateParagraph=nil
 local UI_CREATE_MAX_ATTEMPTS=5
 local UI_CREATE_RETRY_DELAY=0.25
@@ -342,12 +342,29 @@ task.wait(0.5)end
 return anyBought,totalBought,lastItemName
 end
 local SERVER_FETCH_PAGES=3
-local function FetchServerPages()local allServers={}local cursor=""
+local FETCH_MAX_RETRIES=3
+local FETCH_RETRY_BASE_DELAY=1
+local function FetchServerPageWithRetry(url)for attempt=1,FETCH_MAX_RETRIES do
+local ok,result=pcall(function()return HttpService:JSONDecode(game:HttpGet(url))end)if ok and result then
+return result
+end
+if attempt<FETCH_MAX_RETRIES then
+task.wait(FETCH_RETRY_BASE_DELAY*attempt)end
+end
+return nil
+end
+local FETCH_CACHE_DURATION=10
+local CachedServerList=nil
+local CachedServerListAt=0
+local function FetchServerPages(forceRefresh)if not forceRefresh and CachedServerList and(os.clock()-CachedServerListAt)<FETCH_CACHE_DURATION then
+return CachedServerList
+end
+local allServers={}local cursor=""
 for _=1,SERVER_FETCH_PAGES do
 local url=("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100"):format(game.PlaceId)if cursor~="" then
 url=url.."&cursor="..cursor
 end
-local ok,result=pcall(function()return HttpService:JSONDecode(game:HttpGet(url))end)if not ok or not result or not result.data then
+local result=FetchServerPageWithRetry(url)if not result or not result.data then
 break
 end
 for _,server in ipairs(result.data)do
@@ -358,12 +375,16 @@ else
 break
 end
 end
+if #allServers>0 then
+CachedServerList=allServers
+CachedServerListAt=os.clock()end
 return allServers
 end
-local PREFERRED_POPULATION=4
+local SERVER_MAX_CAPACITY=6
+local TELEPORT_FAIL_WAIT=2
 local function SortCandidatesByPreferredPopulation(candidates)local tier1,tier2,tier3={},{},{}for _,server in ipairs(candidates)do
-local diff=math.abs(server.playing-PREFERRED_POPULATION)if diff==0 then
-table.insert(tier1,server)elseif diff==1 then
+if server.playing==4 then
+table.insert(tier1,server)elseif server.playing==3 then
 table.insert(tier2,server)else
 table.insert(tier3,server)end
 end
@@ -372,7 +393,24 @@ for _,s in ipairs(tier2)do table.insert(ordered,s)end
 for _,s in ipairs(tier3)do table.insert(ordered,s)end
 return ordered
 end
-local function ServerHop()local allServers=FetchServerPages()if #allServers>0 then
+local function TryTeleportToServer(targetId)local failed=false
+local failReason=nil
+local conn
+conn=TeleportService.TeleportInitFailed:Connect(function(player,teleportResult,errorMessage)if player==LocalPlayer then
+failed=true
+failReason=errorMessage or tostring(teleportResult)end
+end)local callOk=pcall(function()TeleportService:TeleportToPlaceInstance(game.PlaceId,targetId,LocalPlayer)end)if not callOk then
+conn:Disconnect()return false,"pcall error"
+end
+local waited=0
+while waited<TELEPORT_FAIL_WAIT and not failed do
+task.wait(0.1)waited+=0.1
+end
+conn:Disconnect()return not failed,failReason
+end
+local function ServerHop()local allServers=FetchServerPages()if #allServers==0 then
+task.wait(2)allServers=FetchServerPages(true)end
+if #allServers>0 then
 local function collectCandidates(ignoreVisited)local list={}for _,server in ipairs(allServers)do
 local notFull=server.playing<server.maxPlayers
 local notCurrent=server.id~=game.JobId
@@ -395,13 +433,13 @@ else
 orderedTargets=SortCandidatesByPreferredPopulation(candidates)end
 for _,target in ipairs(orderedTargets)do
 if target.playing<target.maxPlayers then
-MarkVisited(target.id)local tpOk=pcall(function()TeleportService:TeleportToPlaceInstance(game.PlaceId,target.id,LocalPlayer)end)if tpOk then
+local tpOk,reason=TryTeleportToServer(target.id)MarkVisited(target.id)if tpOk then
 return
 end
+NotifyWatch("Server Full","Kandidat server penuh/gagal, coba server lain...","server-crash",2)end
 end
 end
-end
-pcall(function()TeleportService:Teleport(game.PlaceId,LocalPlayer)end)end
+NotifyWatch("Fallback Hop","Server data unavailable, using generic matchmaking...","help-circle",3)pcall(function()TeleportService:Teleport(game.PlaceId,LocalPlayer)end)end
 local function RunLoop(myToken)while Running and RunToken==myToken do
 local targetSet,hasTarget=BuildTargetIdSet()if not hasTarget then
 NotifyWatch("Slow Down!","Select at least 1 target item first!","search",3)task.wait(ScanDelay)else
