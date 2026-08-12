@@ -1,204 +1,1354 @@
-local _version = "1.6.66"
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
-
-WindUI:AddTheme({
-	Name = "JHyellow", -- Nama tema, dipanggil di CreateWindow dengan Theme = "JHyellow"
-
-	-- WARNA DASAR / 
-	Primary = Color3.fromHex("#a78bfa"), -- Warna utama (abu-abu), dipakai ikon secara umum
-	White = Color3.fromHex("#a78bfa"), -- Warna putih murni, dipakai berbagai elemen border dll
-	Black = Color3.new(0, 0, 0), -- Warna hitam murni, dipakai shadow dll
-	Dialog = Color3.fromHex("#18181b"), -- Warna background dialog (popup konfirmasi)
-
-	-- BACKGROUND UTAMA WINDOW
-	Background = Color3.fromHex("#000000"), -- Warna background utama keseluruhan UI
-	BackgroundTransparency = 0, -- 0 = tidak transparan, 1 = transparan penuh
-	Hover = Color3.fromHex("#FFFFFF"), -- Warna efek hover secara 
-
-	-- PANEL (lapisan di belakang konten)
-	PanelBackground = Color3.new(1, 1, 1), -- Warna panel (putih)
-	PanelBackgroundTransparency = 0.95, -- Hampir transparan (0.95), jadi sangat tipis
-
-	-- WINDOW / JENDELA UTAMA
-	WindowBackground = Color3.fromHex("#0a0a0a"), -- Warna background jendela utama
-	WindowShadow = Color3.new(0, 0, 0), -- Warna bayangan di bawah window (hitam)
-	WindowShadowTransparency = 0.6, -- (dinonaktifkan) Transparansi bayangan window
-
-	-- TOPBAR (bagian atas window: judul, author, ikon)
-	WindowTopbarTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul di topbar
-	WindowTopbarAuthor = Color3.fromHex("#a6e3a1"), -- Warna teks author/subtitle di topbar
-	WindowTopbarIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di sebelah judul
-	WindowTopbarButtonIcon = Color3.fromHex("#a6e3a1"), -- Warna ikon tombol (minimize, close dll)
-	WindowSearchBarBackground = Color3.fromHex("#0a0a0a"), -- Warna background search bar di topbar
-
-	-- TAB (menu navigasi di sidebar kiri)
-	TabBackground = Color3.fromHex("#a78bfa"), -- Warna background tab (putih)
-	TabBackgroundHover = Color3.fromHex("#a78bfa"), -- Warna background saat tab di-hover
-	TabBackgroundHoverTransparency = 0.97, -- Sangat transparan saat hover (efek subtle)
-	TabBackgroundActive = Color3.fromHex("#a78bfa"), -- Warna background tab yang sedang aktif
-	TabBackgroundActiveTransparency = 0.93, -- Sedikit lebih terlihat dari hover
-
-	TabText = Color3.fromHex("#a78bfa"), -- Warna teks nama tab
-	TabTextTransparency = 0.3, -- Teks tab tidak aktif: 30% transparan (agak redup)
-	TabTextTransparencyActive = 0, -- Teks tab aktif: 0% transparan (penuh/terang)
-	TabTitle = Color3.fromHex("#ffffff"), -- Warna judul section di dalam tab
-
-	TabIcon = Color3.fromHex("#a78bfa"), -- Warna ikon tab
-	TabIconTransparency = 0.4, -- Ikon tab tidak aktif: 40% transparan (redup)
-	TabIconTransparencyActive = 0, -- Ikon tab aktif: 10% transparan (hampir penuh)
-
-	TabBorderTransparency = 1, -- Border tab tidak aktif: 100% transparan (tidak terlihat)
-	TabBorderTransparencyActive = 0.65, -- Border tab aktif: 75% transparan (samar terlihat)
-	TabBorder = Color3.fromHex("#a78bfa"), -- Warna border tab (putih)
-
-	-- ELEMENT (Toggle, Slider, Button, dll di dalam tab)
-	ElementBackground = Color3.fromHex("#FFFFFF"), -- Warna background setiap elemen
-	ElementBackgroundTransparency = 0.93, -- Sangat transparan, efek frosted glass
-	ElementBackgroundHover = WindUI.Creator:AddColor( -- Warna background elemen saat di-hover
-		"ElementBackground",
-		"#ffffff",
-		1 / 10
-	), -- = ElementBackground + 10% putih (lebih terang)
-	ElementTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul elemen
-	ElementDesc = Color3.fromHex("#FFFFFF"), -- Warna teks deskripsi/subtitle elemen
-	ElementIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di sebelah kiri elemen
-
-	-- POPUP (window kecil muncul di tengah layar)
-	PopupBackground = Color3.fromHex("#0a0a0a"), -- Warna background popup
-	PopupBackgroundTransparency = "BackgroundTransparency", -- Ikut nilai BackgroundTransparency
-	PopupTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul popup
-	PopupContent = Color3.fromHex("#FFFFFF"), -- Warna teks isi popup
-	PopupIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di popup
-
-	-- DIALOG (popup konfirmasi Yes/No)
-	DialogBackground = Color3.fromHex("#0a0a0a"), -- Warna background dialog
-	DialogBackgroundTransparency = "BackgroundTransparency", -- Ikut nilai BackgroundTransparenc
-	DialogTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul dialog
-	DialogContent = Color3.fromHex("#FFFFFF"), -- Warna teks isi dialog
-	DialogIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di dialog
-
-	-- TOGGLE (tombol on/off)
-	Toggle = Color3.fromHex("#a78bfa"), -- Warna background toggle saat OFF (abu gelap)
-	ToggleBar = Color3.new(1, 1, 1), -- Warna lingkaran/thumb toggle (putih)
-
-	-- SLIDER (penggeser nilai)
-	SliderIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di samping slider
-	Slider = Color3.fromHex("#a78bfa"), -- Warna fill/progress bar slider (biru)
-	SliderThumb = Color3.new(1, 1, 1), -- Warna bulatan penggeser slider (putih)
-	SliderIconFrom = Color3.fromHex("#a1a1aa"), -- Warna ikon batas minimum slider
-	SliderIconTo = Color3.fromHex("#a1a1aa"), -- Warna ikon batas maksimum slider
-
-	-- TAB SECTION ICON (ikon di dalam section tab)
-	TabSectionIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon section di dalam tab
-	SectionIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon section header
-
-	-- SECTION BOX (kotak pembatas grup elemen)
-	SectionExpandIcon = Color3.new(1, 1, 1), -- Warna ikon expand/collapse section (putih)
-	SectionExpandIconTransparency = 0.4, -- Ikon expand 40% transparan
-	SectionBox = Color3.new(1, 1, 1), -- Warna kotak section (putih)
-	SectionBoxTransparency = 0.95, -- Kotak section sangat transparan
-	SectionBoxBorder = Color3.new(1, 1, 1), -- Warna border kotak section (putih)
-	SectionBoxBorderTransparency = 0.65, -- Border section 75% transparan
-	SectionBoxBackground = Color3.new(1, 1, 1), -- Warna background dalam section (putih)
-	SectionBoxBackgroundTransparency = 0.95, -- Background section sangat transparan
-
-	-- NOTIFICATION (notifikasi pojok layar)
-	Notification = Color3.fromHex("#0a0a0a"), -- Warna background notifikasi
-	NotificationTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul notifikasi
-	NotificationTitleTransparency = 0, -- Judul notifikasi penuh (tidak transparan)
-	NotificationContent = Color3.fromHex("#FFFFFF"), -- Warna teks isi notifikasi
-	NotificationContentTransparency = 0.4, -- Isi notifikasi 40% transparan (agak redup)
-	NotificationDuration = Color3.fromHex("#a78bfa"), -- Warna bar durasi/timer notifikasi (putih)
-	NotificationDurationTransparency = 0.95, -- Bar durasi sangat transparan
-	NotificationBorder = Color3.fromHex("#a78bfa"), -- Warna border notifikasi (putih)
-	NotificationBorderTransparency = 0.75, -- Border notifikasi 75% transparan
-
-	-- DROPDOWN & LABEL
-	DropdownTabBorder = Color3.fromHex("#a78bfa"), -- Warna border tab dropdown (putih)
-	LabelBackground = Color3.fromHex("#ffffff"), -- Warna background label/paragraph (putih)
-	LabelBackgroundTransparency = 0.95, -- Background label sangat transparan
-})
-
-local Window = WindUI:CreateWindow({
-	Title = "JinHub | Brainrot Evolution ",
-	Icon = "rbxassetid://75269568091825",
-	Author = "Website: jinhub.my.id/topscript",
-	Folder = "JinHub Paid",
-
-	Size = UDim2.fromOffset(480, 350),
-	MinSize = Vector2.new(480, 350),
-	MaxSize = Vector2.new(480, 350),
-	Transparent = true, -- window transparency
-	Theme = "JHyellow", -- library theme
-	Resizable = true, -- the ability to rezize window
-	SideBarWidth = 165, -- sidebar (tabs) width
-	HideSearchBar = true, -- hide search bar
-	ScrollBarEnabled = true, -- scrollbars that are located to the right of the scroll frame
-
-	NewElements = true, -- ← INI yang bikin toggle & slider modern seperti di screenshot
-	Acrylic = true, -- ← efek kaca/blur di background window
-	Radius = 11, -- Radius sudut melengkung pada window (semakin besar = makin bulat)
-	ElementsRadius = 9, -- Radius sudut melengkung pada setiap elemen (button, toggle, dll)
-
-	BackgroundImageTransparency = 0.42, -- background image transparency
-	Background = "rbxassetid://1234", -- rbxassetid
-})
-
-Window:DisableTopbarButtons({
-	"Fullscreen",
-})
-
-Window:SetIconSize(53)
-
---====================================================
--- UNIVERSAL ANTI AFK
---====================================================
-
-local Players = game:GetService("Players")
-local VirtualUser = game:GetService("VirtualUser")
-
-local LocalPlayer = Players.LocalPlayer
-
+local _version="1.6.66"
+local WindUI=loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/".._version.."/main.lua"))()WindUI:AddTheme({Name="JHyellow",Primary=Color3.fromHex("#a78bfa"),White=Color3.fromHex("#a78bfa"),Black=Color3.new(0,0,0),Dialog=Color3.fromHex("#18181b"),Background=Color3.fromHex("#000000"),BackgroundTransparency=0,Hover=Color3.fromHex("#FFFFFF"),PanelBackground=Color3.new(1,1,1),PanelBackgroundTransparency=0.95,WindowBackground=Color3.fromHex("#0a0a0a"),WindowShadow=Color3.new(0,0,0),WindowShadowTransparency=0.6,WindowTopbarTitle=Color3.fromHex("#FFFFFF"),WindowTopbarAuthor=Color3.fromHex("#a6e3a1"),WindowTopbarIcon=Color3.fromHex("#a1a1aa"),WindowTopbarButtonIcon=Color3.fromHex("#a6e3a1"),WindowSearchBarBackground=Color3.fromHex("#0a0a0a"),TabBackground=Color3.fromHex("#a78bfa"),TabBackgroundHover=Color3.fromHex("#a78bfa"),TabBackgroundHoverTransparency=0.97,TabBackgroundActive=Color3.fromHex("#a78bfa"),TabBackgroundActiveTransparency=0.93,TabText=Color3.fromHex("#a78bfa"),TabTextTransparency=0.3,TabTextTransparencyActive=0,TabTitle=Color3.fromHex("#ffffff"),TabIcon=Color3.fromHex("#a78bfa"),TabIconTransparency=0.4,TabIconTransparencyActive=0,TabBorderTransparency=1,TabBorderTransparencyActive=0.65,TabBorder=Color3.fromHex("#a78bfa"),ElementBackground=Color3.fromHex("#FFFFFF"),ElementBackgroundTransparency=0.93,ElementBackgroundHover=WindUI.Creator:AddColor("ElementBackground","#ffffff",1/10),ElementTitle=Color3.fromHex("#FFFFFF"),ElementDesc=Color3.fromHex("#FFFFFF"),ElementIcon=Color3.fromHex("#a1a1aa"),PopupBackground=Color3.fromHex("#0a0a0a"),PopupBackgroundTransparency="BackgroundTransparency",PopupTitle=Color3.fromHex("#FFFFFF"),PopupContent=Color3.fromHex("#FFFFFF"),PopupIcon=Color3.fromHex("#a1a1aa"),DialogBackground=Color3.fromHex("#0a0a0a"),DialogBackgroundTransparency="BackgroundTransparency",DialogTitle=Color3.fromHex("#FFFFFF"),DialogContent=Color3.fromHex("#FFFFFF"),DialogIcon=Color3.fromHex("#a1a1aa"),Toggle=Color3.fromHex("#a78bfa"),ToggleBar=Color3.new(1,1,1),SliderIcon=Color3.fromHex("#a1a1aa"),Slider=Color3.fromHex("#a78bfa"),SliderThumb=Color3.new(1,1,1),SliderIconFrom=Color3.fromHex("#a1a1aa"),SliderIconTo=Color3.fromHex("#a1a1aa"),TabSectionIcon=Color3.fromHex("#a1a1aa"),SectionIcon=Color3.fromHex("#a1a1aa"),SectionExpandIcon=Color3.new(1,1,1),SectionExpandIconTransparency=0.4,SectionBox=Color3.new(1,1,1),SectionBoxTransparency=0.95,SectionBoxBorder=Color3.new(1,1,1),SectionBoxBorderTransparency=0.65,SectionBoxBackground=Color3.new(1,1,1),SectionBoxBackgroundTransparency=0.95,Notification=Color3.fromHex("#0a0a0a"),NotificationTitle=Color3.fromHex("#FFFFFF"),NotificationTitleTransparency=0,NotificationContent=Color3.fromHex("#FFFFFF"),NotificationContentTransparency=0.4,NotificationDuration=Color3.fromHex("#a78bfa"),NotificationDurationTransparency=0.95,NotificationBorder=Color3.fromHex("#a78bfa"),NotificationBorderTransparency=0.75,DropdownTabBorder=Color3.fromHex("#a78bfa"),LabelBackground=Color3.fromHex("#ffffff"),LabelBackgroundTransparency=0.95,})local Window=WindUI:CreateWindow({Title="JinHub | Run a Restaurant",Icon="rbxassetid://75269568091825",Author="Website: jinhub.my.id/topscript",Folder="JinHub Paid",Size=UDim2.fromOffset(480,350),MinSize=Vector2.new(480,350),MaxSize=Vector2.new(480,350),Transparent=true,Theme="JHyellow",Resizable=true,SideBarWidth=165,HideSearchBar=true,ScrollBarEnabled=true,NewElements=true,Acrylic=true,Radius=11,ElementsRadius=9,BackgroundImageTransparency=0.42,Background="rbxassetid://1234",})Window:DisableTopbarButtons({"Fullscreen",})Window:SetIconSize(53)local Players=game:GetService("Players")local VirtualUser=game:GetService("VirtualUser")local LocalPlayer=Players.LocalPlayer
 local Connection
-
-local function AntiAfk()
-
-    if Connection then
-        Connection:Disconnect()
-    end
-
-    Connection = LocalPlayer.Idled:Connect(function()
-
-        pcall(function()
-
-            VirtualUser:CaptureController()
-
-            VirtualUser:ClickButton2(
-                Vector2.new(0,0)
-            )
-
-        end)
-
-    end)
+local function AntiAfk()if Connection then
+Connection:Disconnect()end
+Connection=LocalPlayer.Idled:Connect(function()pcall(function()VirtualUser:CaptureController()VirtualUser:ClickButton2(Vector2.new(0,0))end)end)end
+AntiAfk()LocalPlayer.CharacterAdded:Connect(function()task.wait(300)AntiAfk()end)print("~Thanks For Use JinHub Script~")local CoreGui=game:GetService("CoreGui")local UserInputService=game:GetService("UserInputService")local gui=Instance.new("ScreenGui")gui.Name="JinHubXMenuGUI"
+gui.IgnoreGuiInset=true
+gui.ResetOnSpawn=false
+gui.Parent=CoreGui
+local button=Instance.new("ImageButton")button.Size=UDim2.new(0,44,0,44)button.Name="JinHubXToggle"
+button.BackgroundColor3=Color3.fromRGB(13,13,13)button.Image="rbxassetid://75269568091825"
+button.AutoButtonColor=true
+button.Parent=gui
+local corner=Instance.new("UICorner",button)corner.CornerRadius=UDim.new(0,6)local stroke=Instance.new("UIStroke")stroke.Thickness=1.3
+stroke.Color=Color3.fromHex("#a78bfa")stroke.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+stroke.Parent=button
+local gradient=Instance.new("UIGradient")gradient.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(158,124,249)),ColorSequenceKeypoint.new(1,Color3.fromRGB(201,75,241)),})gradient.Rotation=45
+gradient.Parent=stroke
+local BTN_SIZE=44
+local TOP_PADDING=45
+local function setDefaultPosition()button.Position=UDim2.new(0.5,-(BTN_SIZE/2),0,TOP_PADDING)end
+setDefaultPosition()workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(setDefaultPosition)local dragging=false
+local dragInput=nil
+local dragStart=nil
+local startPos=nil
+local function clampPosition(px,py)local screenSize=workspace.CurrentCamera.ViewportSize
+px=math.clamp(px,0,screenSize.X-BTN_SIZE)py=math.clamp(py,0,screenSize.Y-BTN_SIZE)return UDim2.new(0,px,0,py)end
+button.InputBegan:Connect(function(input)if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
+dragging=true
+dragStart=input.Position
+startPos=button.Position
+input.Changed:Connect(function()if input.UserInputState==Enum.UserInputState.End then
+dragging=false
 end
-
-AntiAfk()
-
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(300)
-    AntiAfk()
-end)
-
-print("~Thanks For Use JinHub Script~")
-
-
-Window:Tag({ Title = "v1.0", Color = Color3.fromHex("#a78bfa") })
-
-Tab = Window:Tab({
-	Title = "New Script",
-	Icon = "users-round",
-	IconColor = Color3.fromHex("#a78bfa"),
-	IconThemed = true,
-	ShowTabTitle = true,
-	Border = true,
-})
+end)end
+end)button.InputChanged:Connect(function(input)if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then
+dragInput=input
+end
+end)UserInputService.InputChanged:Connect(function(input)if input==dragInput and dragging then
+local screenSize=workspace.CurrentCamera.ViewportSize
+local delta=input.Position-dragStart
+local px=startPos.X.Scale*screenSize.X+startPos.X.Offset+delta.X
+local py=startPos.Y.Scale*screenSize.Y+startPos.Y.Offset+delta.Y
+button.Position=clampPosition(px,py)end
+end)local opened=true
+button.MouseButton1Click:Connect(function()if opened then
+opened=false
+pcall(function()Window:Close()end)else
+opened=true
+pcall(function()Window:Open()end)end
+end)Window:OnDestroy(function()gui:Destroy()end)Window:Tag({Title="Paid-1.0",Color=Color3.fromHex("#a78bfa")})PriorityTab=Window:Tab({Title="Priority",Icon="star",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})FishingTab=Window:Tab({Title="Fishing",Icon="ishing-rod",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})MiscTab=Window:Tab({Title="Misc",Icon="sparkles",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})Window:Divider()ConfigTab=Window:Tab({Title="Config",Icon="solar:folder-2-bold",IconColor=Color3.fromHex("#a78bfa"),IconThemed=true,ShowTabTitle=true,Border=true,})FishingTab:Section({Title="Fishing",Icon="fishing-rod",TextSize=19,TextXAlignment="Left",Box=false,BoxBorder=false,Opened=false,FontWeight=Enum.FontWeight.SemiBold,TextTransparency=0.05,})local ReplicatedStorage=game:GetService("ReplicatedStorage")local Players=game:GetService("Players")local RunService=game:GetService("RunService")local ClientFishing=require(ReplicatedStorage.Framework.Client.ClientFishing)local FishingTypes=require(ReplicatedStorage.Framework.Types.FishingTypes)local Player=require(ReplicatedStorage.Framework.Player)local Toolbar=require(ReplicatedStorage.Framework.Client.Toolbar)local ItemDirectory=require(ReplicatedStorage.Framework.Directory.Item)local ClientRestaurant=require(ReplicatedStorage.Framework.Client.ClientRestaurant)local ClientFishingBox=require(ReplicatedStorage.Framework.Client.ClientEntity.ClientFishingBox)local Skill=require(ReplicatedStorage.Framework.Directory.Skill)local SkillsCmds=require(ReplicatedStorage.Framework.Client.SkillsCmds)local Network=require(ReplicatedStorage.Framework.Client.Network)local Saving=require(ReplicatedStorage.Framework.Client.Saving)local LocalPlayer=Players.LocalPlayer
+getgenv().FarmLocks=getgenv().FarmLocks or{}getgenv().FarmLocks.Fishing=false
+getgenv().FishingSpot=getgenv().FishingSpot or nil
+local FAIL_RENOTIFY_INTERVAL=4
+local LastFailReason=nil
+local LastNotifyAt=0
+local function safeNotify(title,content,duration)local ok=pcall(function()WindUI:Notify({Title=title,Content=content,Duration=duration,})end)return ok
+end
+local function showFailNotif(reason)if not reason then
+return
+end
+LastFailReason=reason
+local now=tick()if now-LastNotifyAt<FAIL_RENOTIFY_INTERVAL then
+return
+end
+LastNotifyAt=now
+safeNotify("⚠ Auto Fishing Stopped",reason,FAIL_RENOTIFY_INTERVAL+2)end
+local function clearFailNotif()if LastFailReason then
+end
+LastFailReason=nil
+LastNotifyAt=0
+end
+local function IsOtherModuleLocked()local locks=getgenv().FarmLocks
+for key,value in pairs(locks)do
+if key~="Fishing" and key~="Whirlpool" and value==true then
+return key
+end
+end
+return nil
+end
+local State={AutoFishing=false,CurrentSessionId=nil,BobberWindows=nil,BobberDuration=nil,IsCast=false,HasReeled=false,SelectedRod="Any",SelectedRodId=nil,}local function parseSpotString(text)if not text then
+return nil
+end
+local trimmed=text:gsub("%s+","")if trimmed=="" then
+return nil
+end
+local x,y,z,yaw=text:match("(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)")if x and y and z and yaw then
+local position=Vector3.new(tonumber(x),tonumber(y),tonumber(z))return CFrame.new(position)*CFrame.Angles(0,math.rad(tonumber(yaw)),0)end
+x,y,z=text:match("(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)%s*,%s*(-?%d+%.?%d*)")if x and y and z then
+return CFrame.new(tonumber(x),tonumber(y),tonumber(z))end
+warn("[AutoFishing]")return nil
+end
+local LastProgressAt=tick()local function markProgress()LastProgressAt=tick()end
+local RodEquippedLocally=false
+local RodEquipAttemptCooldown=0
+local EquippedRodName=nil
+local EquippedRodId=nil
+local ToolbarSelectedSlot=nil
+Toolbar.Selected:Connect(function(slot)ToolbarSelectedSlot=slot
+local ok,item=pcall(function()return Toolbar.GetItem(slot)end)if ok and item and item.LinkedFishingRodId then
+RodEquippedLocally=true
+EquippedRodName=item.Name or item.DisplayName
+EquippedRodId=item.LinkedFishingRodId
+else
+RodEquippedLocally=false
+EquippedRodName=nil
+EquippedRodId=nil
+end
+end)Toolbar.Unselected:Connect(function(slot)if ToolbarSelectedSlot==slot then
+ToolbarSelectedSlot=nil
+end
+RodEquippedLocally=false
+EquippedRodName=nil
+EquippedRodId=nil
+State.CurrentSessionId=nil
+State.BobberWindows=nil
+State.BobberDuration=nil
+State.IsCast=false
+State.HasReeled=false
+markProgress()end)local function isRodModel(model)if model.Name:match("Rod")then
+return true
+end
+for _,child in ipairs(model:GetChildren())do
+if child.Name:match("Rod")then
+return true
+end
+end
+if model:FindFirstChild("Handle")then
+return true
+end
+for _,descendant in ipairs(model:GetDescendants())do
+if descendant.Name=="Handle" then
+return true
+end
+end
+return false
+end
+local function isWeldedToLocalCharacter(model)local character=LocalPlayer.Character
+if not character then
+return false
+end
+for _,inst in ipairs(model:GetDescendants())do
+if inst:IsA("Weld")or inst:IsA("Motor6D")or inst:IsA("WeldConstraint")then
+local p0,p1=inst.Part0,inst.Part1
+if(p0 and p0:IsDescendantOf(character))or(p1 and p1:IsDescendantOf(character))then
+return true
+end
+end
+end
+return false
+end
+do
+local ok=pcall(function()local debris=workspace:FindFirstChild("__DEBRIS")if not debris then
+return
+end
+for _,model in ipairs(debris:GetChildren())do
+if model:IsA("Model")and isRodModel(model)and isWeldedToLocalCharacter(model)then
+RodEquippedLocally=true
+break
+end
+end
+end)if not ok then
+warn("[AutoFishing]")end
+end
+local ROD_ID_BY_NAME={}local function buildRodOptions()local options={"Any"}local seen={}for itemId,itemData in pairs(ItemDirectory)do
+if type(itemData)=="table" and itemData.LinkedFishingRodId then
+local displayName=itemData.Name or itemData.DisplayName or itemId
+if not seen[displayName]then
+seen[displayName]=true
+table.insert(options,displayName)ROD_ID_BY_NAME[displayName]=itemData.LinkedFishingRodId
+end
+end
+end
+table.sort(options,function(a,b)if a=="Any" then return true end
+if b=="Any" then return false end
+return a<b
+end)return options
+end
+local ROD_OPTIONS=buildRodOptions()local function findRodSlot()local playerGui=LocalPlayer:FindFirstChild("PlayerGui")if not playerGui then return nil end
+local toolbarGui=playerGui:FindFirstChild("Toolbar")if not toolbarGui then return nil end
+local frame=toolbarGui:FindFirstChild("Frame")if not frame then return nil end
+local contents=frame:FindFirstChild("Contents")if not contents then return nil end
+local fallbackSlot,fallbackName=nil,nil
+for _,child in ipairs(contents:GetChildren())do
+local ok,itemData=pcall(function()return ItemDirectory[child.Name]end)if ok and itemData and itemData.LinkedFishingRodId then
+local slot=child.LayoutOrder
+if slot and slot>0 then
+local displayName=itemData.Name or itemData.DisplayName or child.Name
+if not fallbackSlot then
+fallbackSlot,fallbackName=slot,displayName
+end
+if State.SelectedRod~="Any" and displayName==State.SelectedRod then
+return slot,displayName
+end
+end
+end
+end
+if State.SelectedRod=="Any" then
+return fallbackSlot,fallbackName
+end
+return nil
+end
+local ROD_DEDICATED_SLOT=8
+local function moveRodToHotbarSlot(rodName,slot)local ok,result=pcall(function()return Network.Invoke("Toolbar_Set",rodName,slot)end)return ok and result~=false
+end
+local function findRodInInventory()local ok,save=pcall(function()return Saving.Get()end)if not ok or not save or not save.Inventory then
+return nil
+end
+for itemName,amount in pairs(save.Inventory)do
+if type(amount)=="number" and amount>0 then
+local okDir,itemData=pcall(function()return ItemDirectory[itemName]end)if okDir and itemData and itemData.LinkedFishingRodId then
+local displayName=itemData.Name or itemData.DisplayName or itemName
+if State.SelectedRod=="Any" or displayName==State.SelectedRod then
+return itemName,displayName
+end
+end
+end
+end
+return nil
+end
+local function fastEquipAfterMove()local deadline=tick()+1.5
+while tick()<deadline do
+local slot=findRodSlot()if slot then
+RodEquipAttemptCooldown=tick()+0.3
+if ToolbarSelectedSlot~=slot then
+pcall(function()Toolbar.Select(slot)end)end
+return
+end
+task.wait(0.05)end
+end
+local INVENTORY_MOVE_COOLDOWN=0.75
+local lastInventoryMoveAttempt=0
+local function tryMoveRodFromInventory()if tick()-lastInventoryMoveAttempt<INVENTORY_MOVE_COOLDOWN then
+return false
+end
+lastInventoryMoveAttempt=tick()local itemName=findRodInInventory()if not itemName then
+return false
+end
+local moved=moveRodToHotbarSlot(itemName,ROD_DEDICATED_SLOT)if moved then
+task.spawn(fastEquipAfterMove)end
+return moved
+end
+local function tryEquipRodIfNeeded()if not State.AutoFishing then
+return
+end
+if RodEquippedLocally then
+if State.SelectedRod=="Any" then
+return
+end
+if State.SelectedRodId and EquippedRodId and State.SelectedRodId==EquippedRodId then
+return
+end
+if not State.SelectedRodId or not EquippedRodId then
+if not EquippedRodId and ToolbarSelectedSlot then
+local ok,item=pcall(function()return Toolbar.GetItem(ToolbarSelectedSlot)end)if ok and item and item.LinkedFishingRodId then
+EquippedRodId=item.LinkedFishingRodId
+EquippedRodName=item.Name or item.DisplayName
+end
+end
+return
+end
+end
+if tick()<RodEquipAttemptCooldown then
+return
+end
+local slot=findRodSlot()if not slot then
+if tryMoveRodFromInventory()then
+RodEquipAttemptCooldown=tick()+0.3
+end
+return
+end
+RodEquipAttemptCooldown=tick()+0.5
+if ToolbarSelectedSlot==slot then
+return
+end
+pcall(function()Toolbar.Select(slot)end)end
+local function isCastObstructed(origin,target)local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return false
+end
+local model=restaurant:GetModel()if not model then
+return false
+end
+local params=RaycastParams.new()params.FilterType=Enum.RaycastFilterType.Include
+params.FilterDescendantsInstances={model}params.CollisionGroup="Raycast"
+return workspace:Raycast(origin,target-origin,params)~=nil
+end
+local lastCastDirection=nil
+local CAST_OBSTRUCTION_HEIGHT_OFFSET=Vector3.new(0,2.5,0)local function tryCastDirection(origin,dir,ignoreObstruction)local obstructionOrigin=origin+CAST_OBSTRUCTION_HEIGHT_OFFSET
+for distance=6,FishingTypes.PlayerCastDistance,2 do
+local point=origin+dir*distance
+local probeOrigin=point+Vector3.new(0,FishingTypes.WaterProbeHeight,0)local waterHit=FishingTypes.FindWaterCast(probeOrigin,Vector3.new(0,-1,0))if waterHit and(origin-waterHit).Magnitude<=FishingTypes.PlayerCastDistance then
+if ignoreObstruction or not isCastObstructed(obstructionOrigin,waterHit)then
+return waterHit
+end
+end
+end
+return nil
+end
+local CAST_SCAN_ANGLE_STEP=30
+local SPOT_ARRIVAL_EPSILON=3
+local function getCastTarget()local rootPart=Player.Optional.PrimaryPart(LocalPlayer)if not rootPart then
+return nil
+end
+local spot=getgenv().FishingSpot
+local whirlpoolActive=getgenv().FarmLocks.Whirlpool==true
+if spot and not whirlpoolActive then
+local distanceToSpot=(rootPart.Position-spot.Position).Magnitude
+if distanceToSpot>SPOT_ARRIVAL_EPSILON then
+rootPart.CFrame=spot
+end
+end
+local origin=rootPart.Position
+local function scanAllDirections(ignoreObstruction)local lookVector=rootPart.CFrame.LookVector
+local flatLook=Vector3.new(lookVector.X,0,lookVector.Z)if flatLook.Magnitude>=0.001 then
+flatLook=flatLook.Unit
+local hit=tryCastDirection(origin,flatLook,ignoreObstruction)if hit then
+lastCastDirection=flatLook
+return hit
+end
+end
+if lastCastDirection then
+local hit=tryCastDirection(origin,lastCastDirection,ignoreObstruction)if hit then
+return hit
+end
+end
+for angleDeg=0,359,CAST_SCAN_ANGLE_STEP do
+local angleRad=math.rad(angleDeg)local dir=Vector3.new(math.sin(angleRad),0,math.cos(angleRad))local hit=tryCastDirection(origin,dir,ignoreObstruction)if hit then
+lastCastDirection=dir
+return hit
+end
+end
+return nil
+end
+local hit=scanAllDirections(false)if hit then
+return hit
+end
+return scanAllDirections(true)end
+local RESERVED_STUCK_TIMEOUT=15
+local reservedStuckSince=nil
+local function checkCastPreconditions()if not SkillsCmds.IsSkillUnlocked(Skill.Fishing)then
+return false,"Fishing skill not unlocked yet"
+end
+local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return false,"Local restaurant not found"
+end
+local hasRawSpace=false
+local hasSpace=false
+for _,box in ipairs(restaurant:CollectSubclass("FishingBox"))do
+local capacity=ClientFishingBox.GetCapacity(box)local count=ClientFishingBox.GetCount(box)local reserved=box:GetSession("ReservedCount")or 0
+if capacity-count>0 then
+hasRawSpace=true
+end
+if capacity-count-reserved>0 then
+hasSpace=true
+end
+end
+if hasSpace then
+reservedStuckSince=nil
+return true,nil
+end
+if hasRawSpace then
+if not reservedStuckSince then
+reservedStuckSince=tick()end
+local stuckDuration=tick()-reservedStuckSince
+if stuckDuration>RESERVED_STUCK_TIMEOUT then
+return true,nil
+end
+return false,string.format("Box has free space but is still reserved by the server (%ds, auto-bypass at %ds)",math.floor(stuckDuration),RESERVED_STUCK_TIMEOUT)end
+reservedStuckSince=nil
+return false,"All fishing boxes & fridge are full, waiting to be sold/collected"
+end
+local function isInWindow(now)if not(State.BobberWindows and State.BobberDuration)then
+return false
+end
+for _,windowStart in ipairs(State.BobberWindows)do
+if windowStart<=now and now<=windowStart+State.BobberDuration then
+return true
+end
+end
+return false
+end
+local function resetSessionState()State.CurrentSessionId=nil
+State.BobberWindows=nil
+State.BobberDuration=nil
+State.IsCast=false
+State.HasReeled=false
+markProgress()end
+local attemptCast
+ClientFishing.SessionStarted:Connect(function(session)if session.Player~=LocalPlayer then
+return
+end
+if session.NpcId then
+return
+end
+State.CurrentSessionId=session.Id
+State.BobberWindows=session.BobberWindows
+State.BobberDuration=session.BobberDuration
+State.IsCast=true
+State.HasReeled=false
+markProgress()clearFailNotif()RodEquippedLocally=true
+end)ClientFishing.SessionCleared:Connect(function(sessionId)if sessionId==State.CurrentSessionId then
+resetSessionState()getgenv().FarmLocks.Fishing=false
+if State.AutoFishing then
+task.spawn(attemptCast)end
+end
+end)ClientFishing.SessionSuccess:Connect(function(sessionId,_fishResult)if sessionId==State.CurrentSessionId then
+resetSessionState()getgenv().FarmLocks.Fishing=false
+if State.AutoFishing then
+task.spawn(attemptCast)end
+end
+end)FishingTab:Dropdown({Title="Select Rod",Flag="auto_fishing_rod_type",Value="Any",Values=ROD_OPTIONS,Multi=false,Default="Any",Callback=function(value)State.SelectedRod=value
+State.SelectedRodId=(value~="Any")and ROD_ID_BY_NAME[value]or nil
+end,})local SpotInput=FishingTab:Input({Title="Fishing Spot",Desc="Optional",Flag="auto_fishing_custom_spot",Callback=function(text)getgenv().FishingSpot=parseSpotString(text)end,})FishingTab:Button({Title="Copy Current Position",Callback=function()local rootPart=Player.Optional.PrimaryPart(LocalPlayer)if not rootPart then
+warn("[AutoFishing]")return
+end
+local pos=rootPart.Position
+local _,yawRad,_=rootPart.CFrame:ToOrientation()local yawDeg=math.deg(yawRad)local text=string.format("%.2f, %.2f, %.2f, %.2f",pos.X,pos.Y,pos.Z,yawDeg)local ok=pcall(function()setclipboard(text)end)if not ok then
+warn("[AutoFishing]")end
+end,})FishingTab:Toggle({Title="Auto Fishing",Flag="auto_fishing",Default=false,Callback=function(v)State.AutoFishing=v
+markProgress()if not v then
+clearFailNotif()end
+if v then
+pcall(function()ClientFishing.Cancel()end)task.spawn(function()if State.AutoFishing and not State.IsCast then
+attemptCast()end
+end)end
+end,})local WATCHDOG_TIMEOUT=8.5
+local CastInProgress=false
+attemptCast=function()if not State.AutoFishing then
+return
+end
+if State.IsCast or CastInProgress then
+return
+end
+local lockedBy=IsOtherModuleLocked()if lockedBy then
+return
+end
+tryEquipRodIfNeeded()if not RodEquippedLocally then
+showFailNotif("Rod not equipped yet, trying to auto re-equip...")return
+end
+local preOk,preReason=checkCastPreconditions()if not preOk then
+showFailNotif(preReason or "Precondition failed (unknown reason)")return
+end
+local target=getCastTarget()if not target then
+getgenv().FarmLocks.Fishing=false
+showFailNotif("No water spot found to cast at (check position / Fishing Spot)")return
+end
+CastInProgress=true
+local castOk,castSuccess,castErr=pcall(function()return ClientFishing.Begin(CFrame.new(target))end)if castOk and castSuccess then
+State.IsCast=true
+markProgress()clearFailNotif()else
+getgenv().FarmLocks.Fishing=false
+local reason=castErr
+if not castOk then
+reason="internal error while invoking cast"
+end
+showFailNotif(("Cast rejected by server: %s"):format(tostring(reason or "unknown reason")))end
+CastInProgress=false
+end
+local TICK_INTERVAL=0.1
+local tickAccumulator=0
+RunService.Heartbeat:Connect(function(dt)tickAccumulator=tickAccumulator+dt
+if tickAccumulator<TICK_INTERVAL then
+return
+end
+tickAccumulator=0
+if not State.AutoFishing then
+markProgress()return
+end
+pcall(function()if State.IsCast then
+local now=workspace:GetServerTimeNow()if isInWindow(now)and not State.HasReeled then
+State.HasReeled=true
+markProgress()local sessionAtReel=State.CurrentSessionId
+task.spawn(function()local reelOk,reelResult=pcall(function()return ClientFishing.Reel()end)if State.CurrentSessionId~=sessionAtReel then
+return
+end
+if reelOk and reelResult~=false then
+resetSessionState()if State.AutoFishing then
+attemptCast()end
+else
+showFailNotif("Reel failed, auto-retrying cast...")end
+end)elseif not isInWindow(now)then
+State.HasReeled=false
+end
+end
+if State.IsCast then
+if tick()-LastProgressAt>WATCHDOG_TIMEOUT then
+pcall(function()ClientFishing.Cancel()end)State.CurrentSessionId=nil
+State.BobberWindows=nil
+State.BobberDuration=nil
+State.IsCast=false
+State.HasReeled=false
+getgenv().FarmLocks.Fishing=false
+markProgress()showFailNotif("Cast stuck (watchdog timeout), auto reset & retry...")end
+else
+markProgress()attemptCast()end
+end)end)local Players=game:GetService("Players")local ReplicatedStorage=game:GetService("ReplicatedStorage")local RunService=game:GetService("RunService")local LocalPlayer=Players.LocalPlayer
+local ClientRestaurant=require(ReplicatedStorage.Framework.Client.ClientRestaurant)local ClientFridge=require(ReplicatedStorage.Framework.Client.ClientEntity.ClientFridge)local ClientDeepPool=require(ReplicatedStorage.Framework.Client.ClientDeepPool)local ClientFishingBox=require(ReplicatedStorage.Framework.Client.ClientEntity.ClientFishingBox)local CurrencyCmds=require(ReplicatedStorage.Framework.Client.CurrencyCmds)local Network=require(ReplicatedStorage.Framework.Client.Network)local ApplianceTypes=require(ReplicatedStorage.Framework.Directory.Entity.ApplianceTypes)local FishDirectory=require(ReplicatedStorage.Framework.Directory.Fish)local NotifyTop=require(ReplicatedStorage.Framework.Client.NotifyTop)local EncodeSlotKey=ApplianceTypes.EncodeSlotKey
+getgenv().FarmLocks=getgenv().FarmLocks or{}getgenv().FarmLocks.GlobalBusy=false
+local function GetRootPart()local character=LocalPlayer.Character
+return character and character:FindFirstChild("HumanoidRootPart")end
+local function GetAnchorPosition(part)if not part then
+return nil
+end
+local anchor=part:FindFirstChild("InteractAttachment")or part
+if anchor:IsA("Attachment")then
+return anchor.WorldPosition
+end
+return anchor.Position
+end
+local function TeleportToPart(part,height)height=height or 5
+local rootPart=GetRootPart()if not rootPart then
+return false
+end
+local targetPart=part
+if part:IsA("Model")then
+targetPart=part.PrimaryPart
+end
+if not targetPart then
+return false
+end
+local anchorPosition=GetAnchorPosition(targetPart)if not anchorPosition then
+return false
+end
+local abovePosition=anchorPosition+Vector3.new(0,height,0)local currentRotation=rootPart.CFrame-rootPart.CFrame.Position
+rootPart.CFrame=CFrame.new(abovePosition)*currentRotation
+return true
+end
+local function TeleportToEntity(entity,height)if not entity then
+return false
+end
+local ok,model=pcall(function()return entity:GetModel()end)if not ok or not model then
+return false
+end
+return TeleportToPart(model,height)end
+local Modules={}local function RegisterModule(id,isReadyFn,doWorkTPFn,doWorkNoTPFn)Modules[id]={Id=id,Enabled=false,Assigned=false,Priority=math.huge,IsReady=isReadyFn,DoWorkTP=doWorkTPFn,DoWorkNoTP=doWorkNoTPFn,}return Modules[id]end
+task.spawn(function()while true do
+task.wait(0.1)if getgenv().FarmLocks.GlobalBusy then
+continue
+end
+if LocalPlayer:GetAttribute("HoldingDirtyDish")then
+local dishwasherMod=Modules["Dishwasher"]if dishwasherMod and dishwasherMod.Enabled and dishwasherMod.Assigned then
+local ok,ready=pcall(dishwasherMod.IsReady)if ok and ready then
+getgenv().FarmLocks.GlobalBusy=true
+local doOk,err=pcall(dishwasherMod.DoWorkTP)if not doOk then
+warn("[GlobalFarm][TP] Dishwasher(override) error: "..tostring(err))end
+getgenv().FarmLocks.GlobalBusy=false
+end
+end
+continue
+end
+local candidates={}for _,mod in pairs(Modules)do
+if mod.Enabled and mod.Assigned then
+local ok,ready=pcall(mod.IsReady)if ok and ready then
+table.insert(candidates,mod)end
+end
+end
+if #candidates==0 then
+continue
+end
+table.sort(candidates,function(a,b)return a.Priority<b.Priority
+end)local chosen=candidates[1]getgenv().FarmLocks.GlobalBusy=true
+local ok,err=pcall(chosen.DoWorkTP)if not ok then
+warn("[GlobalFarm][TP] "..chosen.Id.." error: "..tostring(err))end
+getgenv().FarmLocks.GlobalBusy=false
+end
+end)task.spawn(function()while true do
+task.wait(0.5)for _,mod in pairs(Modules)do
+if mod.Enabled and not mod.Assigned and mod.Id~="Piano" and mod.Id~="Whirlpool" and mod.Id~="Meteor" then
+local ok,ready=pcall(mod.IsReady)if ok and ready then
+local doOk,err=pcall(mod.DoWorkNoTP)if not doOk then
+warn("[GlobalFarm][NoTP] "..mod.Id.." error: "..tostring(err))end
+end
+end
+end
+end
+end)getgenv().FarmLocks.Whirlpool=false
+local ownOnlyMode=false
+local whirlpoolHoldConnection=nil
+local whirlpoolOriginalCFrame=nil
+local whirlpoolCurrentTargetId=nil
+local WHIRLPOOL_OFFSET=CFrame.new(0,3,4)local WHIRLPOOL_TICK_INTERVAL=1/20
+local whirlpoolTickAccumulator=0
+local whirlpoolLastAppliedCFrame=nil
+local WHIRLPOOL_POSITION_EPSILON=0.05
+local WHIRLPOOL_ASSIGNED_HOLD_TICK=0.05
+local function getWhirlpoolRestoreCFrame()local spot=getgenv().FishingSpot
+if spot then
+return spot
+end
+return whirlpoolOriginalCFrame
+end
+local function getBestPool(rootPosition)local ownId,ownDisc=nil,nil
+local nearestId,nearestDisc,nearestDist=nil,nil,math.huge
+for id,pool in pairs(ClientDeepPool.GetActivePools())do
+local disc=pool.Disc
+if disc and disc.Parent then
+local remaining=pool.Expiration-workspace:GetServerTimeNow()if remaining>0 then
+if pool.Player==LocalPlayer then
+ownId,ownDisc=id,disc
+elseif not ownOnlyMode then
+local dist=(disc.Position-rootPosition).Magnitude
+if dist<nearestDist then
+nearestDist=dist
+nearestId,nearestDisc=id,disc
+end
+end
+end
+end
+end
+if ownDisc then
+return ownId,ownDisc
+end
+return nearestId,nearestDisc
+end
+local function isCurrentWhirlpoolTargetValid()if not whirlpoolCurrentTargetId then
+return false
+end
+local pools=ClientDeepPool.GetActivePools()local pool=pools[whirlpoolCurrentTargetId]if not pool or not pool.Disc or not pool.Disc.Parent then
+return false
+end
+if ownOnlyMode and pool.Player~=LocalPlayer then
+return false
+end
+local remaining=pool.Expiration-workspace:GetServerTimeNow()return remaining>0,pool.Disc
+end
+local WhirlpoolModule
+local function stopWhirlpoolStandalone()if whirlpoolHoldConnection then
+whirlpoolHoldConnection:Disconnect()whirlpoolHoldConnection=nil
+end
+local character=LocalPlayer.Character
+local rootPart=character and character:FindFirstChild("HumanoidRootPart")if rootPart then
+rootPart.Anchored=false
+local restoreCFrame=getWhirlpoolRestoreCFrame()if restoreCFrame then
+rootPart.CFrame=restoreCFrame
+end
+end
+whirlpoolOriginalCFrame=nil
+whirlpoolCurrentTargetId=nil
+whirlpoolLastAppliedCFrame=nil
+whirlpoolTickAccumulator=0
+getgenv().FarmLocks.Whirlpool=false
+end
+local function releaseWhirlpoolForOtherModule(rootPart)if whirlpoolCurrentTargetId or rootPart.Anchored then
+rootPart.Anchored=false
+local restoreCFrame=getWhirlpoolRestoreCFrame()if restoreCFrame then
+rootPart.CFrame=restoreCFrame
+end
+end
+whirlpoolOriginalCFrame=nil
+whirlpoolCurrentTargetId=nil
+whirlpoolLastAppliedCFrame=nil
+getgenv().FarmLocks.Whirlpool=false
+end
+local function startWhirlpoolStandaloneLoop()if whirlpoolHoldConnection then
+return
+end
+whirlpoolHoldConnection=RunService.Heartbeat:Connect(function(dt)if not WhirlpoolModule.Enabled then
+stopWhirlpoolStandalone()return
+end
+if WhirlpoolModule.Assigned then
+stopWhirlpoolStandalone()return
+end
+whirlpoolTickAccumulator=whirlpoolTickAccumulator+dt
+if whirlpoolTickAccumulator<WHIRLPOOL_TICK_INTERVAL then
+return
+end
+whirlpoolTickAccumulator=0
+local character=LocalPlayer.Character
+local rootPart=character and character:FindFirstChild("HumanoidRootPart")if not rootPart then
+return
+end
+if getgenv().FarmLocks.Piano then
+releaseWhirlpoolForOtherModule(rootPart)return
+end
+local stillValid,currentDisc=isCurrentWhirlpoolTargetValid()local targetDisc=nil
+if stillValid then
+targetDisc=currentDisc
+else
+local refPosition=whirlpoolOriginalCFrame and whirlpoolOriginalCFrame.Position or rootPart.Position
+local bestId,bestDisc=getBestPool(refPosition)if bestDisc then
+if not rootPart.Anchored then
+whirlpoolOriginalCFrame=rootPart.CFrame
+end
+rootPart.Anchored=true
+whirlpoolCurrentTargetId=bestId
+targetDisc=bestDisc
+getgenv().FarmLocks.Whirlpool=true
+else
+if whirlpoolCurrentTargetId or rootPart.Anchored then
+rootPart.Anchored=false
+local restoreCFrame=getWhirlpoolRestoreCFrame()if restoreCFrame then
+rootPart.CFrame=restoreCFrame
+end
+end
+whirlpoolOriginalCFrame=nil
+whirlpoolCurrentTargetId=nil
+whirlpoolLastAppliedCFrame=nil
+getgenv().FarmLocks.Whirlpool=false
+end
+end
+if targetDisc then
+local targetCFrame=targetDisc.CFrame*WHIRLPOOL_OFFSET
+local newCFrame=CFrame.new(targetCFrame.Position,targetDisc.Position)if not whirlpoolLastAppliedCFrame
+or(newCFrame.Position-whirlpoolLastAppliedCFrame.Position).Magnitude>WHIRLPOOL_POSITION_EPSILON
+then
+rootPart.CFrame=newCFrame
+whirlpoolLastAppliedCFrame=newCFrame
+end
+end
+end)end
+LocalPlayer.CharacterAdded:Connect(function()whirlpoolOriginalCFrame=nil
+whirlpoolCurrentTargetId=nil
+whirlpoolLastAppliedCFrame=nil
+end)local function WhirlpoolIsReady()if not WhirlpoolModule.Enabled then
+return false
+end
+local character=LocalPlayer.Character
+local rootPart=character and character:FindFirstChild("HumanoidRootPart")if not rootPart then
+return false
+end
+if isCurrentWhirlpoolTargetValid()then
+return true
+end
+local _,bestDisc=getBestPool(rootPart.Position)return bestDisc~=nil
+end
+local function WhirlpoolDoWorkTP()local character=LocalPlayer.Character
+local rootPart=character and character:FindFirstChild("HumanoidRootPart")if not rootPart then
+return
+end
+if not WhirlpoolModule.Enabled or not WhirlpoolModule.Assigned then
+return
+end
+if getgenv().FarmLocks.Piano then
+releaseWhirlpoolForOtherModule(rootPart)return
+end
+local stillValid,currentDisc=isCurrentWhirlpoolTargetValid()local targetDisc=nil
+if stillValid then
+targetDisc=currentDisc
+else
+local refPosition=whirlpoolOriginalCFrame and whirlpoolOriginalCFrame.Position or rootPart.Position
+local bestId,bestDisc=getBestPool(refPosition)if bestDisc then
+if not rootPart.Anchored then
+whirlpoolOriginalCFrame=rootPart.CFrame
+end
+rootPart.Anchored=true
+whirlpoolCurrentTargetId=bestId
+targetDisc=bestDisc
+getgenv().FarmLocks.Whirlpool=true
+end
+end
+if not targetDisc then
+if rootPart.Anchored then
+rootPart.Anchored=false
+local restoreCFrame=getWhirlpoolRestoreCFrame()if restoreCFrame then
+rootPart.CFrame=restoreCFrame
+end
+end
+whirlpoolOriginalCFrame=nil
+whirlpoolCurrentTargetId=nil
+whirlpoolLastAppliedCFrame=nil
+getgenv().FarmLocks.Whirlpool=false
+return
+end
+local targetCFrame=targetDisc.CFrame*WHIRLPOOL_OFFSET
+local newCFrame=CFrame.new(targetCFrame.Position,targetDisc.Position)if not whirlpoolLastAppliedCFrame
+or(newCFrame.Position-whirlpoolLastAppliedCFrame.Position).Magnitude>WHIRLPOOL_POSITION_EPSILON
+then
+rootPart.CFrame=newCFrame
+whirlpoolLastAppliedCFrame=newCFrame
+end
+end
+local function WhirlpoolDoWorkNoTP()end
+WhirlpoolModule=RegisterModule("Whirlpool",WhirlpoolIsReady,WhirlpoolDoWorkTP,WhirlpoolDoWorkNoTP)FishingTab:Toggle({Title="Auto Whirlpool",Desc="Teleport to all deep pools",Value=false,Locked=false,Flag="AutoTPWhirlpool",Callback=function(state)WhirlpoolModule.Enabled=state
+if state then
+if not WhirlpoolModule.Assigned then
+startWhirlpoolStandaloneLoop()end
+else
+stopWhirlpoolStandalone()end
+end,})FishingTab:Toggle({Title="Whirlpool Own Only",Desc="Only TP to your own whirlpool",Value=false,Locked=false,Flag="AutoTPWhirlpoolOwnOnly",Callback=function(state)ownOnlyMode=state
+end,})FishingTab:Divider()FishingTab:Section({Title="Process Fish",Icon="fish",TextSize=19,TextXAlignment="Left",Box=false,BoxBorder=false,Opened=false,FontWeight=Enum.FontWeight.SemiBold,TextTransparency=0.05,})local AutoProcessFish=false
+local SelectedFish={}local HookedStations={}local HookedBoxes={}local FailedFishCache={}local FAILED_FISH_COOLDOWN=3
+local ProcessFishModule
+local function GetFishList()local list={"--None--",}for fishId in pairs(FishDirectory)do
+table.insert(list,fishId)end
+table.sort(list,function(a,b)if a=="--None--" then
+return true
+end
+if b=="--None--" then
+return false
+end
+return a<b
+end)return list
+end
+local FishDropdown=FishingTab:Dropdown({Title="Select Fish",Flag="auto_process_fish_types",SearchBarEnabled=true,Values=GetFishList(),Multi=true,Default={},Callback=function(v)SelectedFish={}for _,fishId in ipairs(v)do
+if fishId~="--None--" then
+SelectedFish[fishId]=true
+end
+end
+end,})local function getFishFingerprint(fish)return("%s|%s|%s"):format(tostring(fish.Id),tostring(fish.W),tostring(fish.A))end
+local function isFishOnCooldown(fish)local fingerprint=getFishFingerprint(fish)local failedAt=FailedFishCache[fingerprint]if not failedAt then
+return false
+end
+if tick()-failedAt>FAILED_FISH_COOLDOWN then
+FailedFishCache[fingerprint]=nil
+return false
+end
+return true
+end
+local function markFishFailed(fish)FailedFishCache[getFishFingerprint(fish)]=tick()end
+local function collectAvailableFish(restaurant)local availableFish={}for _,box in ipairs(restaurant:CollectSubclass("FishingBox"))do
+for _,fish in ipairs(ClientFishingBox.GetFish(box))do
+if fish.Id and SelectedFish[fish.Id]then
+table.insert(availableFish,fish)end
+end
+end
+return availableFish
+end
+local function tryFillStation(station,restaurant,useTeleport)if station:GetSession("CuttingFishId")~=nil then
+return
+end
+local availableFish=collectAvailableFish(restaurant)if #availableFish==0 then
+return
+end
+if useTeleport then
+local ok=pcall(function()return TeleportToEntity(station)end)if not ok then
+return
+end
+task.wait(0.1)end
+for i=#availableFish,1,-1 do
+local fish=availableFish[i]if isFishOnCooldown(fish)then
+continue
+end
+if type(fish)~="table" or fish.Id==nil or fish.W==nil or fish.A==nil then
+markFishFailed(fish)continue
+end
+local ok,success,err=pcall(function()return station:Invoke("FishCuttingStation_Process",fish)end)if ok and success then
+return
+elseif ok and not success and err then
+markFishFailed(fish)elseif not ok then
+markFishFailed(fish)end
+end
+end
+local function safeTryFillStation(station,restaurant,useTeleport)local ok,err=pcall(function()tryFillStation(station,restaurant,useTeleport)end)if not ok then
+end
+end
+local function fillAllIdleStationsOnce(restaurant)for _,station in ipairs(restaurant:CollectSubclass("FishCuttingStation"))do
+safeTryFillStation(station,restaurant,false)task.wait(0.2)end
+end
+local function hookStation(station)if HookedStations[station]then
+return
+end
+HookedStations[station]=true
+local ok=pcall(function()station:GetSessionSignal("CuttingFishId"):Connect(function(newValue)if newValue==nil and AutoProcessFish and not(ProcessFishModule and ProcessFishModule.Assigned)then
+local restaurant=ClientRestaurant.GetLocal()if restaurant then
+safeTryFillStation(station,restaurant,false)end
+end
+end)station.OnDestroy:Connect(function()HookedStations[station]=nil
+end)end)if not ok then
+HookedStations[station]=nil
+end
+end
+local function hookFishingBox(box)if HookedBoxes[box]then
+return
+end
+HookedBoxes[box]=true
+local ok=pcall(function()box:GetSaveSignal("Fish"):Connect(function()if not AutoProcessFish or(ProcessFishModule and ProcessFishModule.Assigned)then
+return
+end
+local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return
+end
+for _,station in ipairs(restaurant:CollectSubclass("FishCuttingStation"))do
+safeTryFillStation(station,restaurant,false)end
+end)box.OnDestroy:Connect(function()HookedBoxes[box]=nil
+end)end)if not ok then
+HookedBoxes[box]=nil
+end
+end
+local ProcessToggle=FishingTab:Toggle({Title="Auto Process Fish",Flag="auto_process_fish",Default=false,Callback=function(v)AutoProcessFish=v
+if ProcessFishModule then
+ProcessFishModule.Enabled=v
+end
+if v then
+local restaurant=ClientRestaurant.GetLocal()if restaurant then
+local ok,err=pcall(function()fillAllIdleStationsOnce(restaurant)end)if not ok then
+end
+end
+end
+end,})local ok1,err1=pcall(function()ClientRestaurant.HookSubclass("FishCuttingStation",function(station)local ok,err=pcall(function()hookStation(station)if AutoProcessFish and not(ProcessFishModule and ProcessFishModule.Assigned)then
+local restaurant=ClientRestaurant.GetLocal()if restaurant then
+safeTryFillStation(station,restaurant,false)end
+end
+end)if not ok then
+end
+end)end)if not ok1 then
+end
+local ok2,err2=pcall(function()ClientRestaurant.HookSubclass("FishingBox",function(box)local ok,err=pcall(function()hookFishingBox(box)end)if not ok then
+end
+end)end)if not ok2 then
+end
+task.spawn(function()while true do
+local ok,err=pcall(function()if not AutoProcessFish or(ProcessFishModule and ProcessFishModule.Assigned)then
+return
+end
+local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return
+end
+for _,station in ipairs(restaurant:CollectSubclass("FishCuttingStation"))do
+if not HookedStations[station]then
+hookStation(station)safeTryFillStation(station,restaurant,false)end
+end
+for _,box in ipairs(restaurant:CollectSubclass("FishingBox"))do
+if not HookedBoxes[box]then
+hookFishingBox(box)end
+end
+end)if not ok then
+end
+task.wait(3)end
+end)local function ProcessFishIsReady()if not AutoProcessFish then
+return false
+end
+local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return false
+end
+for _,station in ipairs(restaurant:CollectSubclass("FishCuttingStation"))do
+if station:GetSession("CuttingFishId")==nil then
+for _,fish in ipairs(collectAvailableFish(restaurant))do
+if not isFishOnCooldown(fish)then
+return true
+end
+end
+end
+end
+return false
+end
+local function ProcessFishDoWorkTP()local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return
+end
+for _,station in ipairs(restaurant:CollectSubclass("FishCuttingStation"))do
+if station:GetSession("CuttingFishId")==nil then
+safeTryFillStation(station,restaurant,true)return
+end
+end
+end
+local function ProcessFishDoWorkNoTP()local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return
+end
+for _,station in ipairs(restaurant:CollectSubclass("FishCuttingStation"))do
+safeTryFillStation(station,restaurant,false)end
+end
+ProcessFishModule=RegisterModule("ProcessFish",ProcessFishIsReady,ProcessFishDoWorkTP,ProcessFishDoWorkNoTP)local FEATURE_ORDER={{Name="Auto Whirlpool",Module=WhirlpoolModule},{Name="Auto Process Fish",Module=ProcessFishModule},}local FEATURE_NAMES={}local NameToModule={}for _,f in ipairs(FEATURE_ORDER)do
+table.insert(FEATURE_NAMES,f.Name)NameToModule[f.Name]=f.Module
+end
+local PRIORITY_DROPDOWN_VALUES={"--None--"}for _,name in ipairs(FEATURE_NAMES)do
+table.insert(PRIORITY_DROPDOWN_VALUES,name)end
+local RankAssignment={}local RankDropdowns={}local function FindRankOf(name)for rank,assignedName in pairs(RankAssignment)do
+if assignedName==name then
+return rank
+end
+end
+end
+local function MakeRankDropdown(rank)local dropdown
+dropdown=PriorityTab:Dropdown({Title="Priority #"..rank,Values=FEATURE_NAMES,Value=nil,AllowNone=true,Multi=false,Locked=false,SearchBarEnabled=true,Flag="priority_rank_"..rank,Callback=function(selected)local name=selected
+if type(name)=="table" then
+name=name[1]end
+if name=="--None--" then
+name=nil
+end
+local oldNameThisRank=RankAssignment[rank]if not name or name=="" then
+if oldNameThisRank then
+NameToModule[oldNameThisRank].Assigned=false
+NameToModule[oldNameThisRank].Priority=math.huge
+RankAssignment[rank]=nil
+if oldNameThisRank=="Auto Piano" and PianoModule.Enabled and boundPianoEntity then
+tryPlayIfFree(boundPianoEntity)end
+if oldNameThisRank=="Auto Whirlpool" and WhirlpoolModule.Enabled then
+startWhirlpoolStandaloneLoop()end
+end
+return
+end
+if not NameToModule[name]then
+return
+end
+if oldNameThisRank==name then
+return
+end
+local otherRank=FindRankOf(name)if oldNameThisRank then
+NameToModule[oldNameThisRank].Assigned=false
+NameToModule[oldNameThisRank].Priority=math.huge
+if oldNameThisRank=="Auto Piano" and PianoModule.Enabled and boundPianoEntity then
+tryPlayIfFree(boundPianoEntity)end
+if oldNameThisRank=="Auto Whirlpool" and WhirlpoolModule.Enabled then
+startWhirlpoolStandaloneLoop()end
+end
+RankAssignment[rank]=name
+NameToModule[name].Assigned=true
+NameToModule[name].Priority=rank
+if otherRank and otherRank~=rank then
+RankAssignment[otherRank]=nil
+local otherDropdown=RankDropdowns[otherRank]if otherDropdown then
+pcall(function()otherDropdown:Select(nil)end)end
+end
+end,})RankDropdowns[rank]=dropdown
+end
+PriorityTab:Section({Title="Farm Priority",Icon="list-ordered",TextSize=19,TextXAlignment="Left",Box=false,BoxBorder=false,Opened=false,FontWeight=Enum.FontWeight.SemiBold,TextTransparency=0.05,})for rank=1,#FEATURE_ORDER do
+MakeRankDropdown(rank)end
+MiscTab:Section({Title="Auto Place Crate",Icon="arrow-down-to-line",TextSize=19,TextXAlignment="Left",Box=false,BoxBorder=false,Opened=false,FontWeight=Enum.FontWeight.SemiBold,TextTransparency=0.05,})local DisplayToItem={}local SelectedItems={Ranching=nil,Fishing=nil,}local AnimalNames={["Chicken"]=true,["Cow"]=true,["Pig"]=true,["Lamb"]=true,}local CrateNames={["Sunken Crate"]=true,["Ancient Crate"]=true,}local CrateConfig={["SunkenCrate"]={OpenEvent="SunkenCrateOpen",RequiresDock=true},["AncientCrate"]={OpenEvent="AncientCrateOpen",RequiresDock=false},}local ItemNameToSubclass={["Sunken Crate"]="SunkenCrate",["Ancient Crate"]="AncientCrate",}local AutoPlaceEnabled=false
+local AutoPlaceWatcherConnection=nil
+local DoAutoPlace
+local TryAutoPlace
+local LastPickedCategory=nil
+local AutoPlaceRunning=false
+local AutoOpenCratesEnabled=false
+local PLACE_ROTATION=0
+local MAX_PLACED_CRATES=3
+local UI_CREATE_MAX_ATTEMPTS=5
+local UI_CREATE_RETRY_DELAY=0.25
+local function SafeCreateElement(tab,methodName,config)local element=nil
+local attempts=0
+repeat
+attempts+=1
+local ok,result=pcall(function()return tab[methodName](tab,config)end)if ok and result then
+element=result
+elseif attempts<UI_CREATE_MAX_ATTEMPTS then
+task.wait(UI_CREATE_RETRY_DELAY)end
+until element or attempts>=UI_CREATE_MAX_ATTEMPTS
+return element
+end
+local function SafeDropdown(tab,config)return SafeCreateElement(tab,"Dropdown",config)end
+local function SafeButton(tab,config)return SafeCreateElement(tab,"Button",config)end
+local function SafeToggle(tab,config)return SafeCreateElement(tab,"Toggle",config)end
+local function NotifyTrade(title,content,icon,duration)pcall(function()WindUI:Notify({Title=title,Content=content,Icon=icon or "info",Duration=duration or 3.5,})end)end
+local function GetItemsByCategory(category,nameWhitelist)local list={"--None--"}for itemName,dir in pairs(ItemDirectory)do
+if dir and dir.ShopCategory==category then
+local passesFilter=true
+if nameWhitelist then
+passesFilter=nameWhitelist[itemName]==true
+end
+if passesFilter then
+local display=itemName
+DisplayToItem[display]=itemName
+table.insert(list,display)end
+end
+end
+table.sort(list,function(a,b)if a=="--None--" then return true end
+if b=="--None--" then return false end
+return a<b
+end)return list
+end
+local function GetItemsByWhitelist(nameWhitelist)local list={"--None--"}for itemName,dir in pairs(ItemDirectory)do
+if dir and nameWhitelist[itemName]then
+DisplayToItem[itemName]=itemName
+table.insert(list,itemName)end
+end
+table.sort(list,function(a,b)if a=="--None--" then return true end
+if b=="--None--" then return false end
+return a<b
+end)return list
+end
+local function GetItemStock(itemName)local ok,save=pcall(function()return Saving.Get()end)if not ok or not save or not save.Inventory then
+return 0
+end
+local amount=save.Inventory[itemName]return(type(amount)=="number" and amount)or 0
+end
+local function GetPlayerFloor()local restaurant=ClientRestaurant.GetLocal()local pos=Player.Optional.Position()if not restaurant or not pos then
+return 1
+end
+return math.clamp(math.floor((pos.Y-restaurant:GetCFrame().Y+5)/Restaurants.FloorHeight)+1,1,Restaurants.MaximumFloor)end
+local FACTORY_SUBCLASS="MeatHouse"
+local FEEDER_SUBCLASS="Feeder"
+local function IsVoxelOccupied(restaurant,voxel,floor)local ok,entity=pcall(function()return restaurant:GetEntityByVoxel(voxel,Types.HeightLevel.Middle,floor)end)return ok and entity~=nil
+end
+local function FindAnimalPlacementVoxel(restaurant,floor)local anchors={}local okFactory,factories=pcall(function()return restaurant:CollectSubclass(FACTORY_SUBCLASS,{Floor=floor})end)if okFactory and factories then
+for _,v in ipairs(factories)do
+table.insert(anchors,v)end
+end
+local okFeeder,feeders=pcall(function()return restaurant:CollectSubclass(FEEDER_SUBCLASS,{Floor=floor})end)if okFeeder and feeders then
+for _,v in ipairs(feeders)do
+table.insert(anchors,v)end
+end
+if #anchors==0 then
+return nil
+end
+local offsets={}for radius=1,3 do
+for dx=-radius,radius do
+for dy=-radius,radius do
+if math.max(math.abs(dx),math.abs(dy))==radius then
+table.insert(offsets,Vector2.new(dx,dy))end
+end
+end
+end
+for _,anchor in ipairs(anchors)do
+local okVoxel,anchorVoxel=pcall(function()return anchor:GetVoxel()end)if okVoxel and anchorVoxel then
+for _,offset in ipairs(offsets)do
+local candidate=anchorVoxel+offset
+local okWalkable,walkable=pcall(function()return restaurant:IsVoxelWalkable(candidate)end)if okWalkable and walkable and not IsVoxelOccupied(restaurant,candidate,floor)then
+return candidate
+end
+end
+end
+end
+return nil
+end
+local function GetPlacedAnimalCount(restaurant)local ok,animals=pcall(function()return restaurant:CollectSubclass("Animal")end)if not ok or not animals then
+return 0
+end
+return #animals
+end
+local function GetPlacedCrateCount(restaurant)local count=0
+for subclass in pairs(CrateConfig)do
+local ok,crates=pcall(function()return restaurant:CollectSubclass(subclass)end)if ok and crates then
+for _,crate in ipairs(crates)do
+local okDestroyed,isDestroyed=pcall(function()return crate:IsDestroyed()end)if okDestroyed and not isDestroyed then
+count+=1
+end
+end
+end
+end
+return count
+end
+local function GetDockVoxels(restaurant,floor)local ok,walkable=pcall(function()return restaurant:GetWalkableVoxels()end)if not ok or not walkable then
+return{}end
+local dockVoxels={}for _,voxel in ipairs(walkable)do
+local okFloor,floorEntity=pcall(function()return restaurant:GetEntityByVoxel(voxel,Types.HeightLevel.Floor,floor)end)if okFloor and floorEntity then
+local okSub,isDock=pcall(function()return floorEntity:IsSubclass("Dock")end)if okSub and isDock then
+local okMiddle,middleEntity=pcall(function()return restaurant:GetEntityByVoxel(voxel,Types.HeightLevel.Middle,floor)end)if okMiddle and not middleEntity then
+table.insert(dockVoxels,voxel)end
+end
+end
+end
+return dockVoxels
+end
+local function GetGenericPlaceableVoxels(restaurant,floor)local ok,walkable=pcall(function()return restaurant:GetWalkableVoxels()end)if not ok or not walkable then
+return{}end
+local placeable={}for _,voxel in ipairs(walkable)do
+if not IsVoxelOccupied(restaurant,voxel,floor)then
+table.insert(placeable,voxel)end
+end
+return placeable
+end
+local function GetOpenableCrates()local restaurant=ClientRestaurant.GetLocal()if not restaurant then
+return{}end
+local openable={}local now=workspace:GetServerTimeNow()for subclass,config in pairs(CrateConfig)do
+local ok,crates=pcall(function()return restaurant:CollectSubclass(subclass)end)if ok and crates then
+for _,crate in ipairs(crates)do
+local okDestroyed,isDestroyed=pcall(function()return crate:IsDestroyed()end)if okDestroyed and not isDestroyed then
+local okSave,completionTime=pcall(function()return crate:GetSave("CompletionTime")end)if okSave and completionTime and completionTime<=now then
+table.insert(openable,{Crate=crate,OpenEvent=config.OpenEvent})end
+end
+end
+end
+end
+return openable
+end
+local function TeleportToCrate(crate)local character=Players.LocalPlayer.Character
+if not character then
+return false
+end
+local hrp=character:FindFirstChild("HumanoidRootPart")if not hrp then
+return false
+end
+local ok,model=pcall(function()return crate:GetModel()end)if not ok or not model then
+return false
+end
+local primaryPart=model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart",true)if not primaryPart then
+return false
+end
+local cratePos=primaryPart.Position
+local targetCFrame=CFrame.new(cratePos+Vector3.new(0,3,3))hrp.CFrame=targetCFrame
+return true
+end
+local function RunAutoOpenCratesLoop()task.spawn(function()while AutoOpenCratesEnabled do
+local crates=GetOpenableCrates()for _,entry in ipairs(crates)do
+if not AutoOpenCratesEnabled then break end
+local teleported=TeleportToCrate(entry.Crate)task.wait(0.25)if teleported then
+pcall(function()entry.Crate:Invoke(entry.OpenEvent)end)task.defer(TryAutoPlace)end
+task.wait(0.35)end
+task.wait(1)end
+end)end
+local CrateCapacityWatcherRunning=false
+local function RunCrateCapacityWatcher()if CrateCapacityWatcherRunning then
+return
+end
+CrateCapacityWatcherRunning=true
+task.spawn(function()while AutoPlaceEnabled do
+if not AutoPlaceRunning then
+TryAutoPlace()end
+task.wait(1)end
+CrateCapacityWatcherRunning=false
+end)end
+task.wait(0.1)MiscTab:Dropdown({Title="Select Crate",Values=GetItemsByWhitelist(CrateNames),SearchBarEnabled=true,AllowNone=true,Flag="set_crte",Callback=function(v)SelectedItems.Fishing=(v and v~="--None--")and DisplayToItem[v]or nil
+if SelectedItems.Fishing then
+LastPickedCategory="Fishing"
+end
+TryAutoPlace()end,})DoAutoPlace=function(ItemToPlace,Stock)AutoPlaceRunning=true
+task.spawn(function()local Restaurant=ClientRestaurant.GetLocalSafe()local Floor=GetPlayerFloor()local IsAnimalPlacement=(LastPickedCategory=="Ranching")if IsAnimalPlacement then
+local AnimalVoxel=FindAnimalPlacementVoxel(Restaurant,Floor)if not AnimalVoxel then
+NotifyTrade("Warning!","No empty tile near a Feeder/Factory found","map-pin-off")AutoPlaceRunning=false
+return
+end
+NotifyTrade("Auto Place Started",string.format("%s x%d (near Feeder/Factory)",ItemToPlace,Stock),"map-pin",4)local attempted=0
+local placedBefore=GetPlacedAnimalCount(Restaurant)local stoppedByCapacity=false
+for i=1,Stock do
+if not AutoPlaceRunning then break end
+pcall(function()Network.Fire("Build_Place",ItemToPlace,AnimalVoxel.X,AnimalVoxel.Y,PLACE_ROTATION,Floor)end)attempted=attempted+1
+task.wait(0.35)local placedAfter=GetPlacedAnimalCount(Restaurant)if placedAfter<=placedBefore then
+stoppedByCapacity=true
+break
+end
+placedBefore=placedAfter
+end
+if stoppedByCapacity then
+NotifyTrade("Animal Slot Full",string.format("Placed: %d/%d (restaurant capacity reached)",attempted-1,Stock),"ban",5)else
+end
+else
+local PlacedCrates=GetPlacedCrateCount(Restaurant)if PlacedCrates>=MAX_PLACED_CRATES then
+NotifyTrade("Crate Limit Reached",string.format("%d/%d crate masih nangkring, tunggu salah satunya dibuka dulu",PlacedCrates,MAX_PLACED_CRATES),"package",4)AutoPlaceRunning=false
+return
+end
+local Subclass=ItemNameToSubclass[ItemToPlace]local Config=Subclass and CrateConfig[Subclass]local RequiresDock=Config and Config.RequiresDock
+local PlaceVoxels
+if RequiresDock then
+PlaceVoxels=GetDockVoxels(Restaurant,Floor)else
+PlaceVoxels=GetGenericPlaceableVoxels(Restaurant,Floor)end
+if #PlaceVoxels==0 then
+NotifyTrade("Warning!","No empty placeable tiles found on this floor","map-pin-off")AutoPlaceRunning=false
+return
+end
+local RemainingSlots=MAX_PLACED_CRATES-PlacedCrates
+local ToPlace=math.min(Stock,#PlaceVoxels,RemainingSlots)local attempted=0
+local stoppedByCapacity=false
+for i=1,ToPlace do
+if not AutoPlaceRunning then break end
+local currentPlaced=GetPlacedCrateCount(Restaurant)if currentPlaced>=MAX_PLACED_CRATES then
+stoppedByCapacity=true
+break
+end
+local voxel=PlaceVoxels[i]pcall(function()Network.Fire("Build_Place",ItemToPlace,voxel.X,voxel.Y,PLACE_ROTATION,Floor)end)attempted=attempted+1
+task.wait(0.35)end
+if stoppedByCapacity then
+NotifyTrade("Crate Limit Reached",string.format("Placed: %d (limit %d tercapai), nunggu ada yang dibuka",attempted,MAX_PLACED_CRATES),"ban",5)end
+end
+AutoPlaceRunning=false
+TryAutoPlace()end)end
+TryAutoPlace=function()if not AutoPlaceEnabled or AutoPlaceRunning then
+return
+end
+local ItemToPlace=LastPickedCategory and SelectedItems[LastPickedCategory]or nil
+if not ItemToPlace then
+return
+end
+local Stock=GetItemStock(ItemToPlace)if Stock<=0 then
+return
+end
+if LastPickedCategory=="Fishing" then
+local Restaurant=ClientRestaurant.GetLocalSafe()if Restaurant and GetPlacedCrateCount(Restaurant)>=MAX_PLACED_CRATES then
+return
+end
+end
+DoAutoPlace(ItemToPlace,Stock)end
+MiscTab:Toggle({Title="Enable Auto Place",Flag="enbl_plce",Callback=function(state)AutoPlaceEnabled=state
+if state then
+if AutoPlaceWatcherConnection then
+AutoPlaceWatcherConnection:Disconnect()end
+AutoPlaceWatcherConnection=Saving.GetChangedSignal("Inventory"):Connect(function()TryAutoPlace()end)RunCrateCapacityWatcher()TryAutoPlace()else
+AutoPlaceRunning=false
+if AutoPlaceWatcherConnection then
+AutoPlaceWatcherConnection:Disconnect()AutoPlaceWatcherConnection=nil
+end
+end
+end,})MiscTab:Toggle({Title="Auto Open Crate",Flag="opn_crte",Callback=function(state)AutoOpenCratesEnabled=state
+if state then
+RunAutoOpenCratesLoop()else
+end
+end,})local HttpService=game:GetService("HttpService")local BaseFolder=Window.Folder
+local ConfigFolder=BaseFolder.."/configs"
+local IndexFile=ConfigFolder.."/index.json"
+local AutoLoadFile=BaseFolder.."/autoload.txt"
+if makefolder then
+if not isfolder(BaseFolder)then
+makefolder(BaseFolder)end
+if not isfolder(ConfigFolder)then
+makefolder(ConfigFolder)end
+end
+local ConfigName=""
+local SelectedConfig=nil
+local ConfigDropdown
+local AutoLoadButton
+local function Notify(title,text,color)WindUI:Notify({Title=title,Content=text,Duration=3,Color=color or Color3.fromRGB(100,255,100),})end
+local function LoadIndex()if isfile and isfile(IndexFile)then
+local ok,data=pcall(function()return HttpService:JSONDecode(readfile(IndexFile))end)if ok and type(data)=="table" then
+return data
+end
+end
+return{}end
+local function SaveIndex(t)if writefile then
+writefile(IndexFile,HttpService:JSONEncode(t))end
+end
+local function HasConfig(name)for _,v in ipairs(LoadIndex())do
+if v==name then
+return true
+end
+end
+return false
+end
+local function GetAutoLoad()if isfile and isfile(AutoLoadFile)then
+return readfile(AutoLoadFile)end
+return ""
+end
+local function UpdateAutoLoadDesc()local name=GetAutoLoad()if AutoLoadButton then
+AutoLoadButton:SetDesc(name~="" and("Auto Load : "..name)or "No Auto Load Config")end
+end
+ConfigTab:Input({Title="Config Name",Callback=function(text)ConfigName=text
+end,})ConfigDropdown=ConfigTab:Dropdown({Title="Select Config",Values=LoadIndex(),Multi=false,Callback=function(v)SelectedConfig=v
+ConfigName=v
+end,})local function UpdateDropdown()if ConfigDropdown and ConfigDropdown.Refresh then
+ConfigDropdown:Refresh(LoadIndex())end
+end
+local ConfigGroup=ConfigTab:Group({})ConfigGroup:Button({Title="Create Config",Callback=function()if ConfigName=="" then
+Notify("Error","Config empty",Color3.fromRGB(255,100,100))return
+end
+if HasConfig(ConfigName)then
+Notify("Error","Config already exist",Color3.fromRGB(255,100,100))return
+end
+Window.ConfigManager:Config(ConfigName):Save()local list=LoadIndex()table.insert(list,ConfigName)SaveIndex(list)UpdateDropdown()SelectedConfig=ConfigName
+task.defer(function()if ConfigDropdown and ConfigDropdown.Set then
+ConfigDropdown:Set(ConfigName)end
+end)Notify("Success","Config created: "..ConfigName)end,})ConfigGroup:Button({Title="Overwrite Config",Callback=function()if not SelectedConfig then
+Notify("Error","selected config fist!",Color3.fromRGB(255,100,100))return
+end
+Window.ConfigManager:Config(SelectedConfig):Save()Notify("Success","Overwrite: "..SelectedConfig)end,})ConfigTab:Button({Title="Load Config",Callback=function()if not SelectedConfig then
+Notify("Error","selected config fist!",Color3.fromRGB(255,100,100))return
+end
+Window.ConfigManager:Config(SelectedConfig):Load()Notify("Success","Loaded: "..SelectedConfig)end,})AutoLoadButton=ConfigTab:Button({Title="Set Auto Load",Desc="No Auto Load Config",Callback=function()if not SelectedConfig then
+Notify("Error","selected config fist!",Color3.fromRGB(255,100,100))return
+end
+writefile(AutoLoadFile,SelectedConfig)UpdateAutoLoadDesc()Notify("Success","Auto load set: "..SelectedConfig)end,})ConfigTab:Button({Title="Reset Auto Load",Callback=function()writefile(AutoLoadFile,"")UpdateAutoLoadDesc()Notify("Success","Auto load delete")end,})ConfigTab:Button({Title="Remove Selected",Callback=function()if not SelectedConfig then
+Notify("Error","select config first!",Color3.fromRGB(255,100,100))return
+end
+local list=LoadIndex()for i,v in ipairs(list)do
+if v==SelectedConfig then
+table.remove(list,i)break
+end
+end
+SaveIndex(list)if GetAutoLoad()==SelectedConfig then
+writefile(AutoLoadFile,"")end
+SelectedConfig=nil
+ConfigName=""
+UpdateDropdown()UpdateAutoLoadDesc()Notify("Success","Config deleted")end,})ConfigTab:Button({Title="Remove All",Callback=function()SaveIndex({})writefile(AutoLoadFile,"")SelectedConfig=nil
+ConfigName=""
+UpdateDropdown()UpdateAutoLoadDesc()Notify("Success","all config deleted!")end,})task.spawn(function()task.wait(1)local auto=GetAutoLoad()if auto~="" then
+pcall(function()Window.ConfigManager:Config(auto):Load()end)Notify("Success","Auto loaded: "..auto)end
+UpdateAutoLoadDesc()end)
