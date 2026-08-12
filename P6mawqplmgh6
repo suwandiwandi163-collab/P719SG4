@@ -1,0 +1,204 @@
+local _version = "1.6.66"
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
+
+WindUI:AddTheme({
+	Name = "JHyellow", -- Nama tema, dipanggil di CreateWindow dengan Theme = "JHyellow"
+
+	-- WARNA DASAR / 
+	Primary = Color3.fromHex("#a78bfa"), -- Warna utama (abu-abu), dipakai ikon secara umum
+	White = Color3.fromHex("#a78bfa"), -- Warna putih murni, dipakai berbagai elemen border dll
+	Black = Color3.new(0, 0, 0), -- Warna hitam murni, dipakai shadow dll
+	Dialog = Color3.fromHex("#18181b"), -- Warna background dialog (popup konfirmasi)
+
+	-- BACKGROUND UTAMA WINDOW
+	Background = Color3.fromHex("#000000"), -- Warna background utama keseluruhan UI
+	BackgroundTransparency = 0, -- 0 = tidak transparan, 1 = transparan penuh
+	Hover = Color3.fromHex("#FFFFFF"), -- Warna efek hover secara 
+
+	-- PANEL (lapisan di belakang konten)
+	PanelBackground = Color3.new(1, 1, 1), -- Warna panel (putih)
+	PanelBackgroundTransparency = 0.95, -- Hampir transparan (0.95), jadi sangat tipis
+
+	-- WINDOW / JENDELA UTAMA
+	WindowBackground = Color3.fromHex("#0a0a0a"), -- Warna background jendela utama
+	WindowShadow = Color3.new(0, 0, 0), -- Warna bayangan di bawah window (hitam)
+	WindowShadowTransparency = 0.6, -- (dinonaktifkan) Transparansi bayangan window
+
+	-- TOPBAR (bagian atas window: judul, author, ikon)
+	WindowTopbarTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul di topbar
+	WindowTopbarAuthor = Color3.fromHex("#a6e3a1"), -- Warna teks author/subtitle di topbar
+	WindowTopbarIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di sebelah judul
+	WindowTopbarButtonIcon = Color3.fromHex("#a6e3a1"), -- Warna ikon tombol (minimize, close dll)
+	WindowSearchBarBackground = Color3.fromHex("#0a0a0a"), -- Warna background search bar di topbar
+
+	-- TAB (menu navigasi di sidebar kiri)
+	TabBackground = Color3.fromHex("#a78bfa"), -- Warna background tab (putih)
+	TabBackgroundHover = Color3.fromHex("#a78bfa"), -- Warna background saat tab di-hover
+	TabBackgroundHoverTransparency = 0.97, -- Sangat transparan saat hover (efek subtle)
+	TabBackgroundActive = Color3.fromHex("#a78bfa"), -- Warna background tab yang sedang aktif
+	TabBackgroundActiveTransparency = 0.93, -- Sedikit lebih terlihat dari hover
+
+	TabText = Color3.fromHex("#a78bfa"), -- Warna teks nama tab
+	TabTextTransparency = 0.3, -- Teks tab tidak aktif: 30% transparan (agak redup)
+	TabTextTransparencyActive = 0, -- Teks tab aktif: 0% transparan (penuh/terang)
+	TabTitle = Color3.fromHex("#ffffff"), -- Warna judul section di dalam tab
+
+	TabIcon = Color3.fromHex("#a78bfa"), -- Warna ikon tab
+	TabIconTransparency = 0.4, -- Ikon tab tidak aktif: 40% transparan (redup)
+	TabIconTransparencyActive = 0, -- Ikon tab aktif: 10% transparan (hampir penuh)
+
+	TabBorderTransparency = 1, -- Border tab tidak aktif: 100% transparan (tidak terlihat)
+	TabBorderTransparencyActive = 0.65, -- Border tab aktif: 75% transparan (samar terlihat)
+	TabBorder = Color3.fromHex("#a78bfa"), -- Warna border tab (putih)
+
+	-- ELEMENT (Toggle, Slider, Button, dll di dalam tab)
+	ElementBackground = Color3.fromHex("#FFFFFF"), -- Warna background setiap elemen
+	ElementBackgroundTransparency = 0.93, -- Sangat transparan, efek frosted glass
+	ElementBackgroundHover = WindUI.Creator:AddColor( -- Warna background elemen saat di-hover
+		"ElementBackground",
+		"#ffffff",
+		1 / 10
+	), -- = ElementBackground + 10% putih (lebih terang)
+	ElementTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul elemen
+	ElementDesc = Color3.fromHex("#FFFFFF"), -- Warna teks deskripsi/subtitle elemen
+	ElementIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di sebelah kiri elemen
+
+	-- POPUP (window kecil muncul di tengah layar)
+	PopupBackground = Color3.fromHex("#0a0a0a"), -- Warna background popup
+	PopupBackgroundTransparency = "BackgroundTransparency", -- Ikut nilai BackgroundTransparency
+	PopupTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul popup
+	PopupContent = Color3.fromHex("#FFFFFF"), -- Warna teks isi popup
+	PopupIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di popup
+
+	-- DIALOG (popup konfirmasi Yes/No)
+	DialogBackground = Color3.fromHex("#0a0a0a"), -- Warna background dialog
+	DialogBackgroundTransparency = "BackgroundTransparency", -- Ikut nilai BackgroundTransparenc
+	DialogTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul dialog
+	DialogContent = Color3.fromHex("#FFFFFF"), -- Warna teks isi dialog
+	DialogIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di dialog
+
+	-- TOGGLE (tombol on/off)
+	Toggle = Color3.fromHex("#a78bfa"), -- Warna background toggle saat OFF (abu gelap)
+	ToggleBar = Color3.new(1, 1, 1), -- Warna lingkaran/thumb toggle (putih)
+
+	-- SLIDER (penggeser nilai)
+	SliderIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon di samping slider
+	Slider = Color3.fromHex("#a78bfa"), -- Warna fill/progress bar slider (biru)
+	SliderThumb = Color3.new(1, 1, 1), -- Warna bulatan penggeser slider (putih)
+	SliderIconFrom = Color3.fromHex("#a1a1aa"), -- Warna ikon batas minimum slider
+	SliderIconTo = Color3.fromHex("#a1a1aa"), -- Warna ikon batas maksimum slider
+
+	-- TAB SECTION ICON (ikon di dalam section tab)
+	TabSectionIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon section di dalam tab
+	SectionIcon = Color3.fromHex("#a1a1aa"), -- Warna ikon section header
+
+	-- SECTION BOX (kotak pembatas grup elemen)
+	SectionExpandIcon = Color3.new(1, 1, 1), -- Warna ikon expand/collapse section (putih)
+	SectionExpandIconTransparency = 0.4, -- Ikon expand 40% transparan
+	SectionBox = Color3.new(1, 1, 1), -- Warna kotak section (putih)
+	SectionBoxTransparency = 0.95, -- Kotak section sangat transparan
+	SectionBoxBorder = Color3.new(1, 1, 1), -- Warna border kotak section (putih)
+	SectionBoxBorderTransparency = 0.65, -- Border section 75% transparan
+	SectionBoxBackground = Color3.new(1, 1, 1), -- Warna background dalam section (putih)
+	SectionBoxBackgroundTransparency = 0.95, -- Background section sangat transparan
+
+	-- NOTIFICATION (notifikasi pojok layar)
+	Notification = Color3.fromHex("#0a0a0a"), -- Warna background notifikasi
+	NotificationTitle = Color3.fromHex("#FFFFFF"), -- Warna teks judul notifikasi
+	NotificationTitleTransparency = 0, -- Judul notifikasi penuh (tidak transparan)
+	NotificationContent = Color3.fromHex("#FFFFFF"), -- Warna teks isi notifikasi
+	NotificationContentTransparency = 0.4, -- Isi notifikasi 40% transparan (agak redup)
+	NotificationDuration = Color3.fromHex("#a78bfa"), -- Warna bar durasi/timer notifikasi (putih)
+	NotificationDurationTransparency = 0.95, -- Bar durasi sangat transparan
+	NotificationBorder = Color3.fromHex("#a78bfa"), -- Warna border notifikasi (putih)
+	NotificationBorderTransparency = 0.75, -- Border notifikasi 75% transparan
+
+	-- DROPDOWN & LABEL
+	DropdownTabBorder = Color3.fromHex("#a78bfa"), -- Warna border tab dropdown (putih)
+	LabelBackground = Color3.fromHex("#ffffff"), -- Warna background label/paragraph (putih)
+	LabelBackgroundTransparency = 0.95, -- Background label sangat transparan
+})
+
+local Window = WindUI:CreateWindow({
+	Title = "JinHub | Brainrot Evolution ",
+	Icon = "rbxassetid://75269568091825",
+	Author = "Website: jinhub.my.id/topscript",
+	Folder = "JinHub Paid",
+
+	Size = UDim2.fromOffset(480, 350),
+	MinSize = Vector2.new(480, 350),
+	MaxSize = Vector2.new(480, 350),
+	Transparent = true, -- window transparency
+	Theme = "JHyellow", -- library theme
+	Resizable = true, -- the ability to rezize window
+	SideBarWidth = 165, -- sidebar (tabs) width
+	HideSearchBar = true, -- hide search bar
+	ScrollBarEnabled = true, -- scrollbars that are located to the right of the scroll frame
+
+	NewElements = true, -- ← INI yang bikin toggle & slider modern seperti di screenshot
+	Acrylic = true, -- ← efek kaca/blur di background window
+	Radius = 11, -- Radius sudut melengkung pada window (semakin besar = makin bulat)
+	ElementsRadius = 9, -- Radius sudut melengkung pada setiap elemen (button, toggle, dll)
+
+	BackgroundImageTransparency = 0.42, -- background image transparency
+	Background = "rbxassetid://1234", -- rbxassetid
+})
+
+Window:DisableTopbarButtons({
+	"Fullscreen",
+})
+
+Window:SetIconSize(53)
+
+--====================================================
+-- UNIVERSAL ANTI AFK
+--====================================================
+
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+
+local LocalPlayer = Players.LocalPlayer
+
+local Connection
+
+local function AntiAfk()
+
+    if Connection then
+        Connection:Disconnect()
+    end
+
+    Connection = LocalPlayer.Idled:Connect(function()
+
+        pcall(function()
+
+            VirtualUser:CaptureController()
+
+            VirtualUser:ClickButton2(
+                Vector2.new(0,0)
+            )
+
+        end)
+
+    end)
+end
+
+AntiAfk()
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(300)
+    AntiAfk()
+end)
+
+print("~Thanks For Use JinHub Script~")
+
+
+Window:Tag({ Title = "v1.0", Color = Color3.fromHex("#a78bfa") })
+
+Tab = Window:Tab({
+	Title = "New Script",
+	Icon = "users-round",
+	IconColor = Color3.fromHex("#a78bfa"),
+	IconThemed = true,
+	ShowTabTitle = true,
+	Border = true,
+})
