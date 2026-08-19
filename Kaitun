@@ -1,0 +1,4381 @@
+--[[
+    Run a Restaurant - Kaitun Script v3.7
+    One-Tap Tutorial Automation
+
+    CHANGELOG v3.7:
+    - NEW: Filter Milestone Quest - script sekarang bisa bedain quest utama vs milestone
+    - Milestone quest (Earn $50k, Serve 1000 customers, Serve 1000 recipes) di-SKIP
+    - Detection method: cek Tag1, Tag2, atau Goal.QuestId yang contain "milestone"
+    - Milestone quest unlock saat Service Level 10 tapi TIDAK dikerjakan automation
+    - Hanya quest utama (tutorial progression) yang dikerjakan automation
+    - Log improved: "DEBUG: Skipped MILESTONE quest" untuk visibility
+
+    CHANGELOG v3.6:
+    - COMPLETE REWRITE TP system - based on global.lua yang WORKING
+    - Remove semua complexity (noclip, unanchor, anti-ragdoll, tween)
+    - Simple method: TP di DEPAN target (5.5 studs) + keep rotation
+    - Pattern: frontPosition = anchorPosition + (lookVector * 5.5)
+    - currentRotation = rootPart.CFrame - rootPart.CFrame.Position
+    - rootPart.CFrame = CFrame.new(frontPosition) * currentRotation
+    - Tested & proven base method di global.lua - adapted untuk front positioning
+    - Gak kaku, gak tumbang, gak masuk tanah
+
+    CHANGELOG v3.5:
+    - FIX: TP kaku & character tumbang - ROOT CAUSE: Character parts ke-ANCHOR
+    - NEW: UnanchorCharacter() - unanchor semua BasePart (kecuali HumanoidRootPart)
+    - NEW: EnsureUpright() dipanggil SEBELUM & SETELAH TP:
+      * PlatformStand = false
+      * Sit = false
+      * AutoRotate = true
+      * UnanchorCharacter() ← KEY FIX
+    - REVERT ke instant TP (bukan tween) sesuai request user
+    - Altitude safety tetap ada: TP 1.5 studs di atas target
+    - Noclip tetap aktif selama TP
+    - Delay dikurangin jadi 0.05s (lebih fast)
+
+    CHANGELOG v3.4:
+    - NEW: Noclip teleport mode - semua TP sekarang pakai noclip biar aman
+      dan gak nabrak model/furniture lain di restaurant
+    - SetNoclip(true) sebelum TP -> disable CanCollide semua BasePart
+    - SetNoclip(false) setelah TP -> restore CanCollide
+    - Apply ke semua TP: Serve, Cooking, Dishwasher, Claim Earnings, Auto Harvest
+    - Lebih smooth dan gak ada lag/stuck karena collision
+
+    CHANGELOG v3.3:
+    - CHANGE: Auto Buy Wheat Plant sekarang dimulai begitu **Farming skill unlock level 1+**
+      (TIDAK nunggu Service level 10 + Earn $200 quest selesai lagi).
+    - Wheat Plant otomatis dibeli sampai 168 di inventory begitu Farming level >= 1
+    - Rusty Fridge tetap dibeli setelah fase Layout Prep (Service 10 + Earn $200)
+    - Target load layout: 168 Wheat + 2 Fridge di inventory
+    - Flow baru:
+      1. Quest automation sampai Service Level 10
+      2. Farming skill unlock (otomatis dari quest/progression)
+      3. AUTO BUY WHEAT aktif (168 target) ← TRIGGER BARU
+      4. Service skill panel Level 10 + Earn $200 done
+      5. AUTO BUY FRIDGE aktif (2 target)
+      6. Target inventory tercapai → Load layout
+      7. Reconnect → Deteksi items di map → Auto Harvest
+
+    CHANGELOG v3.2:
+    - NEW: Auto Claim Earnings (Cash Register / Tip Jar / Ice Cream Cart)
+      untuk quest type 3 (Earn $) - TP ke tiap entity yang punya saldo > 0,
+      settle, invoke claim. Pattern disamain kayak AutoDishwasher.
+    - Quest type 3 sekarang masuk priority order & punya handler nyata,
+      dulu jatuh ke branch "Unknown type" (full automation tanpa claim).
+
+    CHANGELOG v1.7:
+    - FIX: GUI quest text masih flicker antar quest walau udah ada priority
+      system di v1.5. Root cause: ada DUA tempat yang update QuestLabel --
+      AutoCompleteQuests() (pakai priority) DAN monitor loop terpisah di
+      bawah (task.spawn tiap 3 detik) yang cuma ambil quest pertama dari
+      pairs(activeGoals), padahal urutan pairs() di Lua tidak stabil antar
+      pemanggilan GetActiveGoals(). Dua sumber ini saling tabrakan -> GUI
+      keliatan gonta-ganti.
+    - NEW: SelectFocusQuest(activeGoals) - satu fungsi seleksi prioritas
+      (completed dulu -> priority order -> fallback) dipakai BERSAMA oleh
+      AutoCompleteQuests() dan monitor loop, jadi keduanya selalu nunjuk
+      ke quest yang sama persis. Priority order sekarang eksplisit satu
+      sumber kebenaran: {1, 8, 10, 3, 2, 12, 4, 5, 7}.
+
+    CHANGELOG v1.8:
+    - FIX: Quest type 4 (Hire) dulu hardcoded Network.Invoke("Staff_Hire",
+      "Cleaner") -- selalu nyoba hire Cleaner walau quest-nya minta staff
+      lain (Waiter/Cook/Farmer/Rancher/Fisherman dll).
+    - NEW: ParseHireGoal() - resolve employee asli dari quest ke
+      EntityUtil.Employees (exact match -> case-insensitive -> fuzzy dari
+      teks quest "Hire/Rekrut" + fuzzy ke nama Subclass).
+    - NEW: IsEmployeeOwned() / PurchaseEmployee() - real hire flow: cek
+      udah punya belum lewat EntityUtil.EmployeeSubclasses, cek unlocked
+      lewat ProgressionUtil.IsEmployeeUnlocked, cek cash cukup lewat
+      CurrencyCmds.Get("Cash"), baru Network.Invoke("Employee_Purchase",
+      employeeId). Pattern disamain kayak script Auto Buy Employees.
+    - CLEANUP: CompleteQuestObjective() disederhanain, cabang "BuyStaff"
+      yang hardcoded dihapus (diganti HireEmployeeFromQuest()).
+
+    CHANGELOG v1.9:
+    - CHANGE: Semua TP (TeleportToPart/TeleportToEntity) sekarang taruh
+      player di BELAKANG target, bukan di depan. Cuma tanda offset Z yang
+      dibalik (distance -> -distance) di TeleportToPart; player tetap
+      lookAt() balik ke anchor jadi tetap masuk interact range seperti
+      sebelumnya. Semua pemanggil (AutoServe, AutoSit, AutoTakeOrder,
+      AutoCooking, AutoDishwasher, AutoClaimEarnings) otomatis ikut
+      berubah karena semuanya lewat fungsi ini, gak perlu diubah satu-satu.
+
+    CHANGELOG v2.0:
+    - CHANGE: AutoSit & AutoTakeOrder gak pakai TeleportToEntity lagi,
+      langsung Invoke("AssignSeat") / Invoke("TakeOrder") begitu status
+      customer match (1 = ReadyToSit, 2 = ReadyToOrder). Loop lain
+      (AutoServe, AutoCooking, AutoDishwasher, AutoClaimEarnings) tetap
+      pakai TP seperti biasa, gak diubah.
+
+    CHANGELOG v2.1:
+    - FIX: ParseHireGoal() total dirombak berdasarkan decompile ASLI
+      ReplicatedStorage.Framework.Types.GoalTypes. Ternyata Goal untuk
+      quest type 4 (Hire) TIDAK punya field "EmployeeId" sama sekali --
+      cuma ada dua kemungkinan field:
+        * Goal.StaffId    -> id spesifik di Entity directory, LANGSUNG
+                             valid sebagai key EntityUtil.Employees[StaffId]
+                             (Employees dibangun dari Entity directory yang
+                             difilter subclass, jadi key-nya identik dengan
+                             Entity._id). Gak perlu resolve/fuzzy apapun.
+        * Goal.StaffClass -> cuma nama subclass umum ("Waiter","Cook",dst),
+                             artinya quest minta hire staff KELAS itu,
+                             bukan employee spesifik.
+      Text-parsing dari goalData.Name ("Hire a Cleaner!" dkk) yang dipakai
+      di v1.8/v1.9 DIHAPUS TOTAL karena data terstruktur di Goal.StaffId /
+      Goal.StaffClass jauh lebih reliable dan itu akar masalah kenapa quest
+      Hire selain "Cleaner" (Waiter, Cook, dll) gagal kedeteksi.
+    - NEW: FindHireableFromClass(staffClass) - buat kasus Goal.StaffClass
+      (generik), cari 1 employee manapun dari subclass itu yang belum
+      dimiliki, sudah unlocked, dan cash cukup, baru di-hire.
+
+    CHANGELOG v2.2:
+    - CHANGE: AutoSit, AutoTakeOrder, AutoCooking, AutoServe, AutoDishwasher
+      sekarang di-enable SEKALI di awal AutoCompleteQuests() dan JALAN
+      TERUS sampai Service Level 10 tercapai -- gak lagi bergantung sama
+      quest type yang sedang difokuskan priority system. Dulu kelimanya
+      cuma nyala kalau quest fokus butuh (misal type 1/8/10/5), jadi
+      restoran idle total pas quest fokus lagi Purchase/Hire/Place/Earn,
+      padahal customer baru tetap perlu dilayani biar quest lain (dan
+      level) tetap maju paralel.
+    - Serve ikut selalu dinyalakan bareng Sit/Order/Cook/Dish (bukan cuma
+      4 yang diminta) karena tanpa Serve, makanan yang udah dimasak gak
+      pernah diantar ke customer -- loop bakal buntu di tengah kalau cuma
+      3 dari 5 tahap servis yang jalan.
+    - CLEANUP: Semua toggle redundan per-quest-type (yang dulu nyalain
+      ulang Sit/Order/Cook/Serve/Dish di tiap branch) dihapus karena udah
+      always-on dari awal; branch quest tetap log progress tapi gak lagi
+      nge-toggle apapun.
+
+    CHANGELOG v2.3:
+    - FIX: AutoCooking dulu langsung TP ke order stand & ambil tiket
+      begitu OrderList ada isinya, TANPA cek dulu apakah ada stove kosong.
+      Kalau semua stove lagi full, tiket tetap keambil (percuma, gak bisa
+      dimasak) dan karena loop jalan tiap 0.5 detik, player jadi TP
+      bolak-balik ke stand yang sama terus-menerus selama nunggu stove
+      kosong -- persis kayak yang dilaporkan.
+    - NEW: HasFreeStove() / IsStoveFree() - dicontek dari pattern
+      CookingIsReady() di GlobalFarm Core v4 (pakai
+      ApplianceTypes.EncodeSlotKey buat cek tiap slot masak per stove).
+      AutoCooking sekarang cek HasFreeStove() DULU sebelum coba ambil
+      tiket/TP; kalau semua stove full, loop cuma nunggu (task.wait(1.5))
+      tanpa TP sama sekali sampai ada slot kosong.
+
+    CHANGELOG v2.4:
+    - NEW: Auto Place Table & Chair. Target restoran punya total 6 set
+      (1 set = 1 Table + 2 Chair), dihitung di SELURUH restaurant (semua
+      floor via CollectSubclass tanpa filter Floor), bukan cuma floor
+      tempat player berdiri.
+    - Kalau stock Wooden Table/Wooden Chair di inventory gak cukup buat
+      capai target, otomatis coba beli kekurangannya lewat
+      PurchaseItemFromShop() (reuse fungsi yang sama dipakai quest type
+      2/Purchase). Kalau shop out-of-stock atau cash kurang,
+      PurchaseItemFromShop udah otomatis berhenti & log warning sendiri --
+      watcher loop (RunFurnitureWatcher, tick tiap 2 detik) bakal nyoba
+      lagi otomatis, jadi efeknya "nunggu" seperti diminta, bukan macet
+      permanen.
+    - Placement pattern (anchor Table + 2 Chair di sisi berlawanan,
+      rotasi Chair menghadap Table, confirm placement via
+      WaitForFurniturePlacementConfirmed) disamain persis kayak script
+      Auto Place Table & Chair yang dikasih user.
+    - Auto Place Table & Chair di-enable begitu Start ditekan dan jalan
+      INDEPENDEN dari Step 1-4 (gak nunggu quest/level tertentu), aktif
+      terus sepanjang Running sampai Stop ditekan.
+
+    CHANGELOG v2.5:
+    - NEW: Auto Buy Shop (generic multi-item/multi-kategori). Kaitun gak
+      punya GUI dropdown kayak WindUI, jadi target beli diedit langsung
+      di Config.ShopBuyItems (nama item spesifik) dan/atau
+      Config.ShopBuyCategories (kategori shop, resolve semua item di
+      kategori itu dari ItemDirectory -- sama kayak GetItemsByCategory()
+      di script ShopKeeper).
+    - Stock detection & buy pattern disamain PERSIS kayak script
+      ShopKeeper yang dikasih user: OfferLookup dari
+      Shop.GetOffersRemaining() (key = itemDir._id), while-loop beli
+      terus-menerus selama offers[itemDir].Quantity > 0 & requirement
+      kepenuhi, berhenti detik itu juga pas stock habis. Outer poll
+      0.9s (sama kayak reference) cuma nentuin kapan re-scan list/offers,
+      BUKAN buy rate -- jadi bukan nembak Purchase() buta tiap tick,
+      cuma beli pas beneran ada stock/restock.
+    - Auto Buy Shop cuma aktif otomatis kalau Config.ShopBuyItems atau
+      Config.ShopBuyCategories diisi manual sebelum Start ditekan.
+
+    CHANGELOG v2.6:
+    - FIX: AutoDishwasher dulu gak pernah cek kapasitas dishwasher sama
+      sekali -- begitu ada dishwasher (TargetDishwasherId, punya sendiri,
+      atau fallback manapun), langsung dipakai walau udah penuh. Kalau
+      semua dishwasher penuh, player tetap TP & coba DepositDishPlayer
+      yang gagal diam-diam, terus loop ulang 0.3 detik kemudian tanpa
+      henti.
+    - NEW: IsDishwasherFull() -- disamain persis kayak "JinHub Auto
+      Dishwasher (Fixed)" yang dikasih user. Pakai
+      ClientDishwasher.ComputeCapacity() + GetSession("ReservedCount") +
+      GetSession("CompletionTimestamp") buat hitung slot yang lagi
+      kepake, dibandingin ke capacity asli.
+    - CHANGE: GetDishwasherEntity() sekarang sticky-target (tetep pake
+      TargetDishwasherId lama selama belum penuh) -> prioritas dishwasher
+      milik sendiri yang belum penuh -> fallback dishwasher manapun yang
+      belum penuh -> nil kalau semua penuh. Loop AutoDishwasher auto-idle
+      (task.wait(1.5), gak TP) begitu GetDishwasherEntity() balikin nil.
+    - CHANGE: TP_BACK_DISTANCE dari 3 -> 4.5 studs.
+
+    CHANGELOG v2.7:
+    - NEW: Auto Buy Plots (independen dari Step, sama kayak Furniture &
+      Shop -- jalan terus di background poll 2 detik). Status/purchase
+      logic disamain PERSIS kayak script "AUTO BUY PLOTS" yang dikasih
+      user: GetPlotPackageStatus() ngecek Purchased/Purchasable/
+      Renderable/Hidden lewat rest:IsPackagePurchased(), GamepassRequired,
+      RequireAllPackages, UpgradeRequired (ProgressionUtil.IsGenericUnlocked),
+      RequiredSkillId+RequiredSkillLevel (SkillsCmds.GetLevel), dan Order
+      buat nentuin package "Renderable" berikutnya.
+    - GetPlotPackageCurrencyAmount() baca CurrencyId+CurrencyAmount atau
+      tabel Currency di package, dicek ke CurrencyCmds.Get() sebelum
+      Network.Invoke("Restaurant_PurchasePackage", pkg._id).
+    - Config.AutoBuyPlotIds kosong (default) = auto-beli SEMUA package
+      yang statusnya Purchasable & affordable begitu kebuka; diisi array
+      id (pkg._id) = cuma beli package yang ada di list itu.
+    - NEW module getters: GetEntityPackageModule, GetEntityPackageTypesModule,
+      GetSkillsCmds (dicache sama kayak module getter lain di script).
+
+    CHANGELOG v2.8:
+    - NEW: IsFarmingSkillUnlocked() -- deteksi skill Farming ke-unlock
+      lewat SkillsCmds.IsSkillUnlocked() (sama persis kayak yang dipakai
+      GUI Skills bawaan game buat nunjukin badge "Locked"), resolve skill
+      directory-nya dari Skill.Farming (fallback cari by DisplayName kalau
+      key-nya beda).
+    - CHANGE: TryAutoPlaceFurniture() sekarang berhenti total (early
+      return) begitu IsFarmingSkillUnlocked() true -- Table & Chair
+      berhenti dibeli/diplace begitu Farming kebuka, gak nunggu Stop
+      manual.
+    - NEW: Auto Place Wheat Plant. Aktif HANYA saat Farming unlocked
+      (dicek tiap tick, otomatis switch begitu skill kebuka pas script
+      lagi jalan). Gak ada target jumlah -- terus BELI "Wheat Plant"
+      (PurchaseItemFromShop) kalau stock kurang, dan terus PLACE ke
+      semua tile kosong (GetNonDockPlaceableVoxels) di floor player
+      berdiri. Kalau gak ada ruang kosong sama sekali, otomatis berhenti
+      nunggu (gak coba place), lalu jalan lagi sendiri di tick
+      berikutnya begitu ada ruang -- gak perlu restart manual.
+    - Auto Place Wheat Plant di-enable begitu Start ditekan (independen
+      dari Step, sama kayak Furniture/Shop/Plots), tapi cuma benar-benar
+      ngerjain sesuatu kalau Farming unlocked.
+
+    CHANGELOG v2.9:
+    - NEW: GetServiceSkillDir() / GetServiceSkillLevel() -- baca LEVEL
+      skill Service dari panel Skills (sistem XP terpisah sampai level
+      70, lewat SkillsCmds.GetLevel(ServiceDir._id)). Ini BEDA dari
+      leaderstats "Service"/GetServiceLevel() yang dipakai buat nentuin
+      Step 1 selesai (Config.TargetLevel) -- dua sistem level yang
+      kebetulan sama-sama pake angka 10 sebagai target di request ini,
+      tapi sumber datanya beda.
+    - NEW: Monitor independen (task.spawn, poll 2 detik) yang matiin
+      AutoSitEnabled/AutoTakeOrderEnabled/AutoCookingEnabled/
+      AutoServeEnabled/AutoDishwasherEnabled begitu skill Service nyampe
+      Level 10. Sekali kematiin (ServiceSkillStopApplied), gak dinyalain
+      otomatis lagi (one-way, skill level gak pernah turun).
+    - Quest-quest non-service (Purchase/Hire/Place/Earn/Harvest) di
+      AutoCompleteQuests() TETAP jalan seperti biasa -- yang berhenti
+      cuma 5 automation dasar ini.
+    - ServiceSkillStopApplied di-reset ke false tiap Start ditekan.
+
+    CHANGELOG v3.0:
+    - NEW: Auto Buy Missing Items + Load Layout. Trigger otomatis SEKALI
+      begitu skill Service (panel Skills) nyampe Level 10 -- dipicu
+      bareng monitor AUTO STOP v2.9 di momen yang sama, pakai
+      Config.LayoutCode (text yang di-paste di textbox GUI Kaitun).
+    - Pattern disamain PERSIS kayak script "AUTO BUY MISSING ITEMS +
+      LOAD LAYOUT" yang dikasih user: EntityItemMap/WallItemMap dari
+      Item directory (tag "Buildable") -> Layouts_Import ke slot kosong
+      sementara -> LayoutsCmds.GetData buat ambil layoutData.Entities/
+      Walls -> ComputeLayoutRequiredCounts() ngitung kebutuhan per item
+      -> BuyMissingLayoutItems() (cek Shop.MeetsItemRequirements ->
+      Shop.GetOffersRemaining -> Shop.CanAfford -> ShopCmds.Purchase
+      (item._id)) -> Network.Invoke("Layouts_Load", code) -> hapus slot
+      sementara (Layouts_Delete).
+    - Ini TERPISAH dari Step 2/3 lama (ImportLayout/
+      CheckWheatAndApplyLayout yang masih pakai loadstring) -- fitur ini
+      jalan independen begitu skill Service Level 10 tercapai, gak perlu
+      nunggu Step tertentu.
+    - NEW module getters: GetLayoutsCmds, GetLayoutsTypeModule,
+      GetItemUtilModule, GetInventoryCmds, GetShopModule, GetShopCmdsModule.
+
+    CHANGELOG v3.1:
+    - REMOVED total logic v2.9 ("matiin Sit/TakeOrder/Cooking/Serve/Dish
+      begitu skill Service Level 10") dan v3.0 ("auto-trigger
+      AutoLoadLayoutWithBuy(f961465c2d76) di momen yang sama") -- DIGANTI
+      TOTAL sama sistem "LAYOUT PREP PHASE" v3.1 berikut ini.
+    - NEW trigger kombinasi: fase baru aktif kalau (skill Service Level
+      >=10) DAN (quest "Earn $200 Cash" / quest #11 udah selesai). Quest
+      #11 dideteksi dua cara: (a) hook langsung pas keclaim SESI INI
+      (Goal.Type==3 & Goal.Amount==200), (b) fallback -- kalau Service
+      udah Level 10 tapi quest itu gak ketemu lagi di GetActiveGoals(),
+      anggap udah pernah selesai di sesi sebelumnya (penting buat kasus
+      relog).
+    - CHANGE: begitu fase aktif, AutoCompleteQuests() BERHENTI TOTAL
+      ngejar quest (early-return di awal fungsi, guard QuestAutomationStopped)
+      -- tapi Sit/TakeOrder/Cooking/Serve/Dishwasher TETAP JALAN (gak
+      disentuh sama sekali, beda dari v2.9 lama).
+    - CHANGE: AutoClaimEarningsEnabled dipaksa true terus begitu fase
+      aktif (modal buat beli Wheat Plant & Rusty Fridge).
+    - CHANGE: Auto Place Wheat Plant (v2.8) gate-nya diganti dari
+      "Farming skill unlocked, tanpa target" jadi "LayoutPrepPhaseActive,
+      target 168" -- berhenti otomatis begitu nyampe 168, gak overbuy.
+    - NEW: Auto Place Rusty Fridge, pola sama kayak Wheat Plant tapi
+      single-item non-crop, target 2, dihitung lewat
+      GetPlacedFurnitureCount() (reuse dari modul Furniture).
+    - NEW: CountPlacedWheatCrops() -- deteksi jumlah Wheat Plant yang
+      udah ketanem lewat CollectSubclass("Crop") + cocokin nama model
+      (di-strip " Crop_X"), PERSIS kayak cara script "Auto Harvest Crop"
+      yang dikasih user dapetin CropName dari Model.Name.
+    - NEW: ANTI RECONNECT-LOOP. Layouts_Load bikin game reconnect
+      (normal, bukan bug) -- karena reconnect = script ke-execute ULANG
+      dari nol, variable Lua session gak bisa dipakai buat nyegah trigger
+      ulang. Solusinya: begitu fase Layout Prep BARU AKTIF, langsung cek
+      jumlah Wheat & Rusty Fridge yang UDAH ADA saat itu juga (sebelum
+      sempat beli/taruh apa-apa sendiri di sesi ini). Kalau udah
+      >=168 & >=2, anggap layout ini udah pernah di-apply sebelumnya ->
+      SKIP Layouts_Load total. Layouts_Load cuma beneran ditembak (sekali,
+      dijaga LayoutPrepTriggered) kalau target itu baru kepenuhi SETELAH
+      fase ini aktif -- alias beneran fresh, belum pernah di-load.
+    - LayoutCode buat fase ini di-hardcode "baaa19988c7c" di
+      LayoutPrepConfig, TERPISAH dari Config.LayoutCode/textbox GUI lama
+      (yang masih dipakai Step 2-4 legacy & AutoLoadLayoutWithBuy v3.0).
+    - LayoutPrepPhaseActive/Earn200QuestDone/QuestAutomationStopped/
+      LayoutPrepTriggered di-reset tiap Start ditekan.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Configuration
+local Config = {
+    TargetLevel = 10,
+    LayoutCode = "",
+    CheckInterval = 1,
+    AutoRejoinOnLayoutChange = true,
+
+    -- v2.5: Auto Buy Shop. Kaitun gak punya GUI dropdown kayak WindUI,
+    -- jadi list-nya diedit langsung di sini sebelum jalanin script.
+    -- Bisa isi nama item spesifik (ShopBuyItems) dan/atau kategori shop
+    -- (ShopBuyCategories, ambil semua item ShopCategory itu dari
+    -- ItemDirectory -- sama kayak GetItemsByCategory() di script
+    -- ShopKeeper). Contoh:
+    --   ShopBuyItems = {"Wooden Table", "Wooden Chair"},
+    --   ShopBuyCategories = {"Furniture", "Appliances"},
+    ShopBuyItems = {},
+    ShopBuyCategories = {},
+
+    -- v2.7: Auto Buy Plots. Kosongin (default) buat auto-beli SEMUA plot
+    -- package yang statusnya Purchasable & affordable begitu status itu
+    -- kebuka -- ini yang dimaksud "independen": jalan terus di background
+    -- gak nunggu Step/quest tertentu, sama kayak Furniture & Shop.
+    -- Isi array id package (pkg._id) di sini kalau mau batasin cuma
+    -- beli plot tertentu aja, contoh: {"Plot_2", "Plot_3"}.
+    AutoBuyPlotIds = {},
+}
+
+-- UI Library (Simple GUI)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KaitunRAR"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game:GetService("CoreGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 400, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 50)
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Title.Text = "RAR Kaitun v3.7"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 20
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = Title
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 30)
+StatusLabel.Position = UDim2.new(0, 10, 0, 60)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Status: Idle"
+StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusLabel.TextSize = 14
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = MainFrame
+
+local QuestLabel = Instance.new("TextLabel")
+QuestLabel.Size = UDim2.new(1, -20, 0, 30)
+QuestLabel.Position = UDim2.new(0, 10, 0, 90)
+QuestLabel.BackgroundTransparency = 1
+QuestLabel.Text = "Active Quest: None"
+QuestLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+QuestLabel.TextSize = 12
+QuestLabel.Font = Enum.Font.Gotham
+QuestLabel.TextXAlignment = Enum.TextXAlignment.Left
+QuestLabel.Parent = MainFrame
+
+local LayoutInput = Instance.new("TextBox")
+LayoutInput.Size = UDim2.new(1, -20, 0, 100)
+LayoutInput.Position = UDim2.new(0, 10, 0, 130)
+LayoutInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+LayoutInput.Text = "Paste Layout Code Here..."
+LayoutInput.TextColor3 = Color3.new(1, 1, 1)
+LayoutInput.TextSize = 12
+LayoutInput.Font = Enum.Font.Code
+LayoutInput.TextWrapped = true
+LayoutInput.MultiLine = true
+LayoutInput.ClearTextOnFocus = true
+LayoutInput.Parent = MainFrame
+
+local LayoutInputCorner = Instance.new("UICorner")
+LayoutInputCorner.CornerRadius = UDim.new(0, 5)
+LayoutInputCorner.Parent = LayoutInput
+
+local StartButton = Instance.new("TextButton")
+StartButton.Size = UDim2.new(1, -20, 0, 40)
+StartButton.Position = UDim2.new(0, 10, 0, 240)
+StartButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+StartButton.Text = "Start Kaitun"
+StartButton.TextColor3 = Color3.new(1, 1, 1)
+StartButton.TextSize = 16
+StartButton.Font = Enum.Font.GothamBold
+StartButton.Parent = MainFrame
+
+local StartButtonCorner = Instance.new("UICorner")
+StartButtonCorner.CornerRadius = UDim.new(0, 5)
+StartButtonCorner.Parent = StartButton
+
+local StopButton = Instance.new("TextButton")
+StopButton.Size = UDim2.new(1, -20, 0, 40)
+StopButton.Position = UDim2.new(0, 10, 0, 290)
+StopButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+StopButton.Text = "Stop"
+StopButton.TextColor3 = Color3.new(1, 1, 1)
+StopButton.TextSize = 16
+StopButton.Font = Enum.Font.GothamBold
+StopButton.Parent = MainFrame
+
+local StopButtonCorner = Instance.new("UICorner")
+StopButtonCorner.CornerRadius = UDim.new(0, 5)
+StopButtonCorner.Parent = StopButton
+
+local LogFrame = Instance.new("ScrollingFrame")
+LogFrame.Size = UDim2.new(1, -20, 0, 160)
+LogFrame.Position = UDim2.new(0, 10, 0, 340)
+LogFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+LogFrame.BorderSizePixel = 0
+LogFrame.ScrollBarThickness = 6
+LogFrame.Parent = MainFrame
+
+local LogFrameCorner = Instance.new("UICorner")
+LogFrameCorner.CornerRadius = UDim.new(0, 5)
+LogFrameCorner.Parent = LogFrame
+
+local LogLayout = Instance.new("UIListLayout")
+LogLayout.SortOrder = Enum.SortOrder.LayoutOrder
+LogLayout.Padding = UDim.new(0, 2)
+LogLayout.Parent = LogFrame
+
+-- Variables
+local Running = false
+local CurrentStep = 1
+local LogCount = 0
+local CachedRestaurant = nil
+local CachedClientRestaurant = nil
+local CachedNetwork = nil
+local CachedItemDirectory = nil
+local CurrentActiveQuest = "None"
+local ClaimedQuestCache = {}
+
+-- ============================================================
+-- Utility Functions
+-- ============================================================
+local function Log(message)
+    LogCount = LogCount + 1
+    local LogLabel = Instance.new("TextLabel")
+    LogLabel.Size = UDim2.new(1, -10, 0, 20)
+    LogLabel.BackgroundTransparency = 1
+    LogLabel.Text = "[" .. os.date("%H:%M:%S") .. "] " .. message
+    LogLabel.TextColor3 = Color3.new(1, 1, 1)
+    LogLabel.TextSize = 11
+    LogLabel.Font = Enum.Font.Code
+    LogLabel.TextXAlignment = Enum.TextXAlignment.Left
+    LogLabel.LayoutOrder = LogCount
+    LogLabel.Parent = LogFrame
+
+    LogFrame.CanvasSize = UDim2.new(0, 0, 0, LogLayout.AbsoluteContentSize.Y)
+    LogFrame.CanvasPosition = Vector2.new(0, LogFrame.CanvasSize.Y.Offset)
+
+    print("[RAR Kaitun] " .. message)
+end
+
+local function UpdateStatus(status, color)
+    StatusLabel.Text = "Status: " .. status
+    if color then
+        StatusLabel.TextColor3 = color
+    end
+end
+
+local function UpdateQuestDisplay(questName, progress, amount)
+    if questName then
+        QuestLabel.Text = string.format("Quest: %s [%d/%d]", questName, progress or 0, amount or 1)
+    else
+        QuestLabel.Text = "Active Quest: None"
+    end
+end
+
+local function InitializeModules()
+    Log("Initializing game modules...")
+
+    pcall(function()
+        CachedClientRestaurant = require(ReplicatedStorage.Framework.Client.ClientRestaurant)
+        Log("✓ ClientRestaurant module loaded")
+    end)
+
+    pcall(function()
+        CachedNetwork = require(ReplicatedStorage.Framework.Client.Network)
+        Log("✓ Network module loaded")
+    end)
+
+    pcall(function()
+        CachedItemDirectory = require(ReplicatedStorage.Framework.Directory.Item)
+        Log("✓ Item directory loaded")
+    end)
+
+    if CachedClientRestaurant then
+        local attempts = 0
+        local maxAttempts = 10
+
+        repeat
+            attempts = attempts + 1
+            CachedRestaurant = CachedClientRestaurant.GetLocal()
+            if not CachedRestaurant then
+                Log(string.format("Waiting for restaurant... (%d/%d)", attempts, maxAttempts))
+                task.wait(1)
+            end
+        until CachedRestaurant or attempts >= maxAttempts
+
+        if CachedRestaurant then
+            Log("✓ Restaurant loaded successfully!")
+            return true
+        else
+            Log("❌ Restaurant not available")
+            return false
+        end
+    end
+
+    Log("❌ Failed to initialize modules")
+    return false
+end
+
+local function GetPlayerLevel()
+    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+    if leaderstats then
+        local level = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("Service")
+        if level then
+            return level.Value
+        end
+    end
+    return 0
+end
+
+local function GetServiceLevel()
+    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+    if leaderstats then
+        local service = leaderstats:FindFirstChild("Service")
+        if service then
+            return service.Value
+        end
+    end
+    return 0
+end
+
+local function GetSaving()
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.Saving)
+    end)
+    return ok and module or nil
+end
+
+local function GetGoalCmds()
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.GoalCmds)
+    end)
+    return ok and module or nil
+end
+
+local function GetQuestCmds()
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.QuestCmds)
+    end)
+    return ok and module or nil
+end
+
+local function GetQuestDirectory()
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.Quest)
+    end)
+    return ok and module or nil
+end
+
+local function GetItemDirectory()
+    if CachedItemDirectory then
+        return CachedItemDirectory
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.Item)
+    end)
+    if ok then
+        CachedItemDirectory = module
+    end
+    return ok and module or nil
+end
+
+-- ============================================================
+-- Module getters buat AUTO BUY MISSING ITEMS + LOAD LAYOUT (v3.0)
+-- ============================================================
+local CachedLayoutsCmds = nil
+local function GetLayoutsCmds()
+    if CachedLayoutsCmds then
+        return CachedLayoutsCmds
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.LayoutsCmds)
+    end)
+    if ok then
+        CachedLayoutsCmds = module
+    end
+    return ok and module or nil
+end
+
+local CachedLayoutsTypeModule = nil
+local function GetLayoutsTypeModule()
+    if CachedLayoutsTypeModule then
+        return CachedLayoutsTypeModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Types.Layouts)
+    end)
+    if ok then
+        CachedLayoutsTypeModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedItemUtilModule = nil
+local function GetItemUtilModule()
+    if CachedItemUtilModule then
+        return CachedItemUtilModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Universal.ItemUtil)
+    end)
+    if ok then
+        CachedItemUtilModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedInventoryCmds = nil
+local function GetInventoryCmds()
+    if CachedInventoryCmds then
+        return CachedInventoryCmds
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.InventoryCmds)
+    end)
+    if ok then
+        CachedInventoryCmds = module
+    end
+    return ok and module or nil
+end
+
+local CachedShopModule = nil
+local function GetShopModule()
+    if CachedShopModule then
+        return CachedShopModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Universal.Shop)
+    end)
+    if ok then
+        CachedShopModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedShopCmdsModule = nil
+local function GetShopCmdsModule()
+    if CachedShopCmdsModule then
+        return CachedShopCmdsModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.ShopCmds)
+    end)
+    if ok then
+        CachedShopCmdsModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedEntityPackageModule = nil
+local function GetEntityPackageModule()
+    if CachedEntityPackageModule then
+        return CachedEntityPackageModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.EntityPackage)
+    end)
+    if ok then
+        CachedEntityPackageModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedEntityPackageTypesModule = nil
+local function GetEntityPackageTypesModule()
+    if CachedEntityPackageTypesModule then
+        return CachedEntityPackageTypesModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.EntityPackage.Types)
+    end)
+    if ok then
+        CachedEntityPackageTypesModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedSkillsCmds = nil
+local function GetSkillsCmds()
+    if CachedSkillsCmds then
+        return CachedSkillsCmds
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.SkillsCmds)
+    end)
+    if ok then
+        CachedSkillsCmds = module
+    end
+    return ok and module or nil
+end
+
+local CachedSkillDirectory = nil
+local function GetSkillDirectory()
+    if CachedSkillDirectory then
+        return CachedSkillDirectory
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.Skill)
+    end)
+    if ok then
+        CachedSkillDirectory = module
+    end
+    return ok and module or nil
+end
+
+-- ============================================================
+-- v2.8: Deteksi skill Farming ke-unlock, dipakai buat switch behaviour
+-- Auto Place -- selama Farming masih Locked, tetap Auto Place Table &
+-- Chair kayak biasa; begitu Farming unlocked, berhenti beli/place Table
+-- & Chair, ganti fokus ke Wheat Plant.
+-- v3.3: Ditambah GetFarmingSkillLevel() untuk deteksi level skill
+-- ============================================================
+local CachedFarmingSkillDir = nil
+local function GetFarmingSkillDir()
+    if CachedFarmingSkillDir then
+        return CachedFarmingSkillDir
+    end
+    local Skill = GetSkillDirectory()
+    if not Skill then
+        return nil
+    end
+
+    -- coba exact key dulu ("Farming")
+    if Skill.Farming then
+        CachedFarmingSkillDir = Skill.Farming
+        return CachedFarmingSkillDir
+    end
+
+    -- fallback: cari lewat DisplayName == "Farming" (case-insensitive),
+    -- jaga-jaga kalau key directory-nya beda dari nama tampilan
+    for _, dir in pairs(Skill) do
+        if typeof(dir) == "table" and dir.DisplayName and dir.DisplayName:lower() == "farming" then
+            CachedFarmingSkillDir = dir
+            return dir
+        end
+    end
+
+    return nil
+end
+
+local function IsFarmingSkillUnlocked()
+    local SkillsCmds = GetSkillsCmds()
+    local FarmingDir = GetFarmingSkillDir()
+    if not SkillsCmds or not FarmingDir then
+        -- Gagal deteksi -> anggap masih locked (default aman, tetap Table & Chair)
+        return false
+    end
+
+    local ok, unlocked = pcall(function()
+        return SkillsCmds.IsSkillUnlocked(FarmingDir)
+    end)
+    return ok and unlocked or false
+end
+
+-- v3.3: Get level skill Farming (0 = locked, 1+ = unlocked)
+local function GetFarmingSkillLevel()
+    local SkillsCmds = GetSkillsCmds()
+    local FarmingDir = GetFarmingSkillDir()
+    if not SkillsCmds or not FarmingDir or not FarmingDir._id then
+        return 0
+    end
+
+    local ok, level = pcall(function()
+        return SkillsCmds.GetLevel(FarmingDir._id)
+    end)
+    return (ok and level) or 0
+end
+
+-- ============================================================
+-- v2.9: Deteksi LEVEL skill Service (dari panel Skills, sistem XP
+-- terpisah sampai level 70 -- BUKAN leaderstats "Service"/Config.TargetLevel
+-- yang dipakai buat nentuin Step 1 selesai). Dipakai buat matiin base
+-- restaurant loop (Sit/TakeOrder/Cooking/Serve/Dish) begitu skill Service
+-- ini nyampe Level 10.
+-- ============================================================
+local CachedServiceSkillDir = nil
+local function GetServiceSkillDir()
+    if CachedServiceSkillDir then
+        return CachedServiceSkillDir
+    end
+    local Skill = GetSkillDirectory()
+    if not Skill then
+        return nil
+    end
+
+    if Skill.Service then
+        CachedServiceSkillDir = Skill.Service
+        return CachedServiceSkillDir
+    end
+
+    for _, dir in pairs(Skill) do
+        if typeof(dir) == "table" and dir.DisplayName and dir.DisplayName:lower() == "service" then
+            CachedServiceSkillDir = dir
+            return dir
+        end
+    end
+
+    return nil
+end
+
+local function GetServiceSkillLevel()
+    local SkillsCmds = GetSkillsCmds()
+    local ServiceDir = GetServiceSkillDir()
+    if not SkillsCmds or not ServiceDir or not ServiceDir._id then
+        return 0
+    end
+
+    local ok, level = pcall(function()
+        return SkillsCmds.GetLevel(ServiceDir._id)
+    end)
+    return (ok and level) or 0
+end
+
+-- ============================================================
+-- Modules & helpers for Auto Place (quest type 12)
+-- ============================================================
+local CachedRestaurantsModule = nil
+local function GetRestaurantsModule()
+    if CachedRestaurantsModule then
+        return CachedRestaurantsModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Types.Restaurants)
+    end)
+    if ok then
+        CachedRestaurantsModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedEntityTypesModule = nil
+local function GetEntityTypesModule()
+    if CachedEntityTypesModule then
+        return CachedEntityTypesModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.Entity.Types)
+    end)
+    if ok then
+        CachedEntityTypesModule = module
+    end
+    return ok and module or nil
+end
+
+-- ============================================================
+-- Stove free-slot check (buat AutoCooking, biar gak TP bolak-balik ke
+-- order stand tiap 0.5s ambil tiket padahal semua stove lagi full).
+-- Pattern & EncodeSlotKey disamain persis kayak GlobalFarm Core v4.
+-- ============================================================
+local CachedApplianceTypesModule = nil
+local function GetApplianceTypesModule()
+    if CachedApplianceTypesModule then
+        return CachedApplianceTypesModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.Entity.ApplianceTypes)
+    end)
+    if ok then
+        CachedApplianceTypesModule = module
+    end
+    return ok and module or nil
+end
+
+local function IsStoveFree(stove)
+    local ApplianceTypes = GetApplianceTypesModule()
+    if not ApplianceTypes or not ApplianceTypes.EncodeSlotKey then
+        -- Fail-open: kalau module gak ke-load, jangan block cooking sama
+        -- sekali, mending tetep jalan seperti behavior lama.
+        return true
+    end
+    local EncodeSlotKey = ApplianceTypes.EncodeSlotKey
+
+    local ok, directory = pcall(function()
+        return stove:GetDirectory()
+    end)
+    local slots = (ok and directory and directory.StoveSlots) or 1
+
+    for i = 1, slots do
+        local okSession, cooking = pcall(function()
+            return stove:GetSession(EncodeSlotKey("Cooking", i))
+        end)
+        if okSession and not cooking then
+            return true
+        end
+    end
+    return false
+end
+
+local function HasFreeStove()
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    if not CachedRestaurant then
+        return false
+    end
+
+    for _, stove in ipairs(CachedRestaurant:CollectSubclass("Stove")) do
+        local isLocalOk, isLocal = pcall(function()
+            return stove:IsLocal()
+        end)
+        if isLocalOk and isLocal and IsStoveFree(stove) then
+            return true
+        end
+    end
+    return false
+end
+
+-- ============================================================
+-- Modules needed for real Auto Hire Employee (quest type 4)
+-- ============================================================
+
+
+local CachedCurrencyCmds = nil
+local function GetCurrencyCmds()
+    if CachedCurrencyCmds then
+        return CachedCurrencyCmds
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.CurrencyCmds)
+    end)
+    if ok then
+        CachedCurrencyCmds = module
+    end
+    return ok and module or nil
+end
+
+local CachedProgressionUtil = nil
+local function GetProgressionUtil()
+    if CachedProgressionUtil then
+        return CachedProgressionUtil
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Universal.ProgressionUtil)
+    end)
+    if ok then
+        CachedProgressionUtil = module
+    end
+    return ok and module or nil
+end
+
+local CachedEntityUtil = nil
+local function GetEntityUtil()
+    if CachedEntityUtil then
+        return CachedEntityUtil
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Universal.EntityUtil)
+    end)
+    if ok then
+        CachedEntityUtil = module
+    end
+    return ok and module or nil
+end
+
+local function GetItemStock(itemName)
+    local Saving = GetSaving()
+    if not Saving then
+        return 0
+    end
+    local ok, save = pcall(function()
+        return Saving.Get()
+    end)
+    if not ok or not save or not save.Inventory then
+        return 0
+    end
+    local amount = save.Inventory[itemName]
+    return (type(amount) == "number" and amount) or 0
+end
+
+local function GetPlayerFloor(restaurant)
+    local Restaurants = GetRestaurantsModule()
+    if not restaurant or not Restaurants then
+        return 1
+    end
+
+    local character = LocalPlayer.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        return 1
+    end
+
+    local ok, restaurantCFrame = pcall(function()
+        return restaurant:GetCFrame()
+    end)
+    if not ok or not restaurantCFrame then
+        return 1
+    end
+
+    local pos = hrp.Position
+    return math.clamp(
+        math.floor((pos.Y - restaurantCFrame.Y + 5) / Restaurants.FloorHeight) + 1,
+        1,
+        Restaurants.MaximumFloor
+    )
+end
+
+local function IsVoxelOccupied(restaurant, voxel, floor, Types)
+    local ok, entity = pcall(function()
+        return restaurant:GetEntityByVoxel(voxel, Types.HeightLevel.Middle, floor)
+    end)
+    return ok and entity ~= nil
+end
+
+local function GetGenericPlaceableVoxels(restaurant, floor, Types)
+    local ok, walkable = pcall(function()
+        return restaurant:GetWalkableVoxels()
+    end)
+
+    if not ok or not walkable then
+        return {}
+    end
+
+    local placeable = {}
+    for _, voxel in ipairs(walkable) do
+        if not IsVoxelOccupied(restaurant, voxel, floor, Types) then
+            table.insert(placeable, voxel)
+        end
+    end
+
+    return placeable
+end
+
+local function GetActiveGoals()
+    local goals = {}
+
+    local Saving = GetSaving()
+    if Saving then
+        local ok, saveData = pcall(function()
+            return Saving.Get()
+        end)
+
+        if ok and saveData and saveData.Goals then
+            local goalCount = 0
+            for _ in pairs(saveData.Goals) do goalCount = goalCount + 1 end
+
+            if goalCount > 0 then
+                Log(string.format("DEBUG: Found %d goals in save data", goalCount))
+            end
+
+            for goalId, goalData in pairs(saveData.Goals) do
+                if goalData.Goal then
+                    -- v3.7: FILTER MILESTONE QUEST
+                    -- Milestone quest punya Tag2 yang isinya Quest ID dengan prefix "Milestone"
+                    -- atau bisa cek Tag1 == "Milestone"
+                    local isMilestone = false
+                    
+                    -- Check Tag1
+                    if goalData.Tag1 and tostring(goalData.Tag1):lower():find("milestone") then
+                        isMilestone = true
+                        Log(string.format("DEBUG: Skipped MILESTONE quest (Tag1): %s", goalId))
+                    end
+                    
+                    -- Check Tag2 (Quest ID)
+                    if goalData.Tag2 and tostring(goalData.Tag2):lower():find("milestone") then
+                        isMilestone = true
+                        Log(string.format("DEBUG: Skipped MILESTONE quest (Tag2): %s", goalId))
+                    end
+                    
+                    -- Check Goal.QuestId if exists
+                    if goalData.Goal.QuestId and tostring(goalData.Goal.QuestId):lower():find("milestone") then
+                        isMilestone = true
+                        Log(string.format("DEBUG: Skipped MILESTONE quest (QuestId): %s", goalId))
+                    end
+                    
+                    -- SKIP milestone quest dari automation
+                    if isMilestone then
+                        continue
+                    end
+
+                    local displayName = goalId
+
+                    pcall(function()
+                        local GoalTypes = require(ReplicatedStorage.Framework.Types.GoalTypes)
+                        if GoalTypes.GoalToString then
+                            displayName = GoalTypes.GoalToString(goalData.Goal)
+                        end
+                    end)
+
+                    goals[goalId] = {
+                        Name = displayName,
+                        Progress = goalData.Progress or 0,
+                        Amount = goalData.Goal.Amount or 1,
+                        Completed = goalData.Completed or false,
+                        GoalData = goalData,
+                        Tag1 = goalData.Tag1,
+                        Type = goalData.Goal.Type,
+                        GoalId = goalId
+                    }
+
+                    Log(string.format("DEBUG: Goal %s | Type: %d | Progress: %d/%d | Completed: %s",
+                        displayName, goalData.Goal.Type or 0, goalData.Progress or 0,
+                        goalData.Goal.Amount or 1, tostring(goalData.Completed)))
+                end
+            end
+
+            if next(goals) then
+                return goals
+            else
+                Log("DEBUG: No valid goals found in save data")
+            end
+        else
+            Log("DEBUG: Save data or Goals table not available")
+        end
+    else
+        Log("DEBUG: Saving module not loaded")
+    end
+
+    return goals
+end
+
+-- ============================================================
+-- SelectFocusQuest - SATU-SATUNYA tempat logic prioritas quest.
+-- Dipakai bareng oleh AutoCompleteQuests() (yang benerin actionnya) dan
+-- monitor loop di bawah (yang cuma update GUI). Kalau dua tempat itu
+-- makai fungsi seleksi yang beda, hasilnya bisa beda quest -> GUI flicker.
+-- Priority: Serve (1/8) > Cook (10) > Earn (3) > Purchase (2) > Place (12)
+--           > Hire (4) > Dish (5) > Harvest (7)
+-- ============================================================
+local QuestPriorityOrder = {1, 8, 10, 3, 2, 12, 4, 5, 7}
+
+local function SelectFocusQuest(activeGoals)
+    if not activeGoals or not next(activeGoals) then
+        return nil
+    end
+
+    -- Phase 1: completed quest diklaim duluan, apapun tipenya
+    for _, goalData in pairs(activeGoals) do
+        if goalData.Completed then
+            return goalData
+        end
+    end
+
+    -- Phase 2: pilih SATU uncompleted quest berdasarkan priority order
+    for _, priorityType in ipairs(QuestPriorityOrder) do
+        for _, goalData in pairs(activeGoals) do
+            if not goalData.Completed and goalData.Type == priorityType then
+                return goalData
+            end
+        end
+    end
+
+    -- Fallback: tipe quest yang gak ada di priority order, ambil yang
+    -- pertama ketemu (masih lebih baik daripada nggak milih sama sekali)
+    for _, goalData in pairs(activeGoals) do
+        if not goalData.Completed then
+            return goalData
+        end
+    end
+
+    return nil
+end
+
+local function GetCurrentQuest()
+    local questData = nil
+
+    pcall(function()
+        local saveData = LocalPlayer:FindFirstChild("Saves")
+        if saveData then
+            local activeQuests = saveData:FindFirstChild("ActiveQuests")
+            if activeQuests then
+                for _, quest in pairs(activeQuests:GetChildren()) do
+                    questData = quest
+                    break
+                end
+            end
+        end
+    end)
+
+    return questData
+end
+
+local function GetClientRestaurant()
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.ClientRestaurant)
+    end)
+    if ok and module then
+        Log("✓ ClientRestaurant module loaded")
+    else
+        Log("❌ Failed to load ClientRestaurant module")
+    end
+    return ok and module or nil
+end
+
+local function GetNetwork()
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.Network)
+    end)
+    if ok and module then
+        Log("✓ Network module loaded")
+    else
+        Log("❌ Failed to load Network module")
+    end
+    return ok and module or nil
+end
+
+local CachedClientDishwasher = nil
+local function GetClientDishwasher()
+    if CachedClientDishwasher then
+        return CachedClientDishwasher
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.ClientEntity.ClientDishwasher)
+    end)
+    if ok then
+        CachedClientDishwasher = module
+    end
+    return ok and module or nil
+end
+
+local function WaitForRestaurant()
+    Log("Waiting for restaurant to load...")
+    local ClientRestaurant = GetClientRestaurant()
+    if not ClientRestaurant then
+        return nil
+    end
+
+    local restaurant = nil
+    local attempts = 0
+    local maxAttempts = 20
+
+    repeat
+        attempts = attempts + 1
+        restaurant = ClientRestaurant.GetLocal()
+        if not restaurant then
+            Log(string.format("Restaurant not ready... (%d/%d)", attempts, maxAttempts))
+            task.wait(1)
+        end
+    until restaurant or attempts >= maxAttempts
+
+    if restaurant then
+        Log("✓ Restaurant loaded successfully!")
+
+        local ok, info = pcall(function()
+            local entities = restaurant:GetEntities()
+            local customers = restaurant:CollectSubclass("Customer")
+            local stands = restaurant:CollectSubclass("OrderStand")
+
+            return string.format("Entities: %d | Customers: %d | Stands: %d",
+                #entities, #customers, #stands)
+        end)
+
+        if ok then
+            Log(info)
+        end
+    else
+        Log("❌ Failed to load restaurant after " .. maxAttempts .. " attempts")
+    end
+
+    return restaurant
+end
+
+-- ============================================================
+-- TELEPORT HELPERS (v1.9: TP ke BELAKANG target, bukan di depan)
+-- ============================================================
+local TP_BACK_DISTANCE = 5.5 -- jarak di belakang target (studs)
+local TP_BACK_HEIGHT = 0     -- offset tinggi tambahan dari anchor (0 = sejajar anchor)
+local TP_SETTLE_DELAY = 0.15
+
+-- ============================================================
+-- Teleport helpers - SIMPLE METHOD (v3.6)
+-- Based on global.lua - TP di BELAKANG target 5.5 studs + 3 studs ke atas
+-- Character jatuh natural dengan gravity
+-- ============================================================
+local function GetRootPart()
+    local character = LocalPlayer.Character
+    return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function GetAnchorPosition(part)
+    if not part then
+        return nil
+    end
+    local anchor = part:FindFirstChild("InteractAttachment") or part
+    if anchor:IsA("Attachment") then
+        return anchor.WorldPosition
+    end
+    return anchor.Position
+end
+
+-- Get LookVector dari part untuk tentukan arah belakang
+local function GetPartLookVector(part)
+    if not part then
+        return Vector3.new(0, 0, -1)
+    end
+    -- Ambil LookVector dari part CFrame
+    return part.CFrame.LookVector
+end
+
+-- Simple TP: position di BELAKANG target + 3 studs ke atas + keep current rotation
+-- Character spawn di atas terus jatuh natural (gravity)
+local function TeleportToPart(part, backDistance, heightOffset)
+    backDistance = backDistance or 5.5
+    heightOffset = heightOffset or 3 -- 3 studs ke atas untuk fall effect
+    
+    local rootPart = GetRootPart()
+    if not rootPart then
+        return false
+    end
+
+    local targetPart = part
+    if part:IsA("Model") then
+        targetPart = part.PrimaryPart
+    end
+    if not targetPart then
+        return false
+    end
+
+    local anchorPosition = GetAnchorPosition(targetPart)
+    if not anchorPosition then
+        return false
+    end
+
+    -- Get arah belakang dari target (opposite LookVector)
+    local lookVector = GetPartLookVector(targetPart)
+    local backOffset = -lookVector * backDistance  -- BELAKANG (negative)
+    
+    -- Position di belakang target + offset ke atas (fall effect)
+    local backPosition = anchorPosition + backOffset + Vector3.new(0, heightOffset, 0)
+    
+    -- Keep current rotation (natural)
+    local currentRotation = rootPart.CFrame - rootPart.CFrame.Position
+
+    rootPart.CFrame = CFrame.new(backPosition) * currentRotation
+    return true
+end
+
+local function TeleportToEntity(entity, backDistance, heightOffset)
+    if not entity then
+        return false
+    end
+    local ok, model = pcall(function()
+        return entity:GetModel()
+    end)
+    if not ok or not model then
+        return false
+    end
+    return TeleportToPart(model, backDistance, heightOffset)
+end
+
+-- ============================================================
+-- TELEPORT HELPERS (v3.6: Simple method + back positioning + fall effect)
+-- TP di BELAKANG target (5.5 studs) + 3 studs ke atas, jatuh natural
+-- ============================================================
+local TP_FRONT_DISTANCE = 5.5
+local TP_SETTLE_DELAY = 0.15
+
+-- AUTO SERVE
+local AutoServeEnabled = false
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+
+        if not AutoServeEnabled then
+            continue
+        end
+
+        local customerId = LocalPlayer:GetAttribute("TargetCustomerId")
+        local recipeId = LocalPlayer:GetAttribute("TargetCustomerRecipeId")
+
+        if customerId and recipeId then
+            if CachedNetwork then
+                if not CachedRestaurant then
+                    CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+                end
+
+                local customerEntity = CachedRestaurant and CachedRestaurant:GetEntity(customerId)
+                if customerEntity then
+                    TeleportToEntity(customerEntity) -- v3.5: instant TP + unanchor fix
+                    task.wait(TP_SETTLE_DELAY)
+                end
+
+                pcall(function()
+                    CachedNetwork.Invoke("Entity_Invoke", customerId, "PlaceDeliveryPlayer")
+                    Log("✓ Delivered to customer")
+                end)
+            end
+            task.wait(0.1)
+            continue
+        end
+
+        if not CachedRestaurant then
+            CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+        end
+
+        if not CachedRestaurant then
+            continue
+        end
+
+        local hasReadyFood = false
+        for _, stand in ipairs(CachedRestaurant:CollectSubclass("OrderStand")) do
+            if not stand:IsLocal() then
+                continue
+            end
+
+            local readyList = stand:GetSession("ReadyList")
+            if readyList and #readyList > 0 then
+                hasReadyFood = true
+                local targetCustomerId = readyList[1][1]
+                if targetCustomerId then
+                    TeleportToEntity(stand) -- v3.5: instant TP + unanchor fix
+                    task.wait(TP_SETTLE_DELAY)
+
+                    pcall(function()
+                        stand:Invoke("TakeDeliveryPlayer", targetCustomerId)
+                        Log("✓ Took ready food from stand")
+                    end)
+                    task.wait(0.1)
+                    break
+                end
+            end
+        end
+
+        if not hasReadyFood then
+            task.wait(1)
+        end
+    end
+end)
+
+-- AUTO SIT (v2.0: gak pakai TP, langsung invoke remote kayak AssignSeat
+-- biasanya bisa dipanggil dari jarak jauh selama customer status match)
+local AutoSitEnabled = false
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+
+        if not AutoSitEnabled then
+            continue
+        end
+
+        if not CachedRestaurant then
+            CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+        end
+
+        if not CachedRestaurant then
+            continue
+        end
+
+        for _, customer in ipairs(CachedRestaurant:CollectSubclass("Customer")) do
+            if customer:IsDestroyed() then
+                continue
+            end
+
+            if customer:GetSession("Status") == 1 then
+                pcall(function()
+                    customer:Invoke("AssignSeat")
+                    Log("✓ Seated customer")
+                end)
+            end
+        end
+    end
+end)
+
+-- AUTO TAKE ORDER (v2.0: gak pakai TP, langsung invoke remote)
+local AutoTakeOrderEnabled = false
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+
+        if not AutoTakeOrderEnabled then
+            continue
+        end
+
+        if not CachedRestaurant then
+            CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+        end
+
+        if not CachedRestaurant then
+            continue
+        end
+
+        for _, customer in ipairs(CachedRestaurant:CollectSubclass("Customer")) do
+            if customer:IsDestroyed() then
+                continue
+            end
+
+            if customer:GetSession("Status") == 2 then
+                pcall(function()
+                    customer:Invoke("TakeOrder")
+                    Log("✓ Took order")
+                end)
+            end
+        end
+    end
+end)
+
+-- AUTO COOKING
+local AutoCookingEnabled = false
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+
+        if not AutoCookingEnabled then
+            continue
+        end
+
+        local stoveRecipeId = LocalPlayer:GetAttribute("TargetStoveRecipeId")
+        if stoveRecipeId then
+            if not CachedRestaurant then
+                CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+            end
+
+            if CachedRestaurant then
+                local stoveId = LocalPlayer:GetAttribute("TargetStoveId")
+                if stoveId then
+                    local stove = CachedRestaurant:GetEntity(stoveId)
+                    if stove then
+                        TeleportToEntity(stove) -- v3.5: instant TP + unanchor fix
+                        task.wait(TP_SETTLE_DELAY)
+
+                        pcall(function()
+                            stove:Invoke("ActivateStovePlayer")
+                            Log("✓ Started cooking")
+                        end)
+                    end
+                end
+            end
+            task.wait(0.1)
+            continue
+        end
+
+        if not CachedRestaurant then
+            CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+        end
+
+        if not CachedRestaurant then
+            continue
+        end
+
+        -- v2.3: cek dulu ada stove kosong sebelum ambil tiket & TP ke
+        -- order stand. Dulu langsung TP+TakeTicket begitu OrderList ada
+        -- isinya, gak peduli semua stove lagi full -- akibatnya tiket
+        -- keambil percuma (gak bisa dimasak) dan loop 0.5s bikin player
+        -- TP bolak-balik ke stand yang sama terus-terusan tiap tick.
+        if not HasFreeStove() then
+            Log("⏳ Semua stove full, nunggu slot kosong (skip ambil tiket)...")
+            task.wait(1.5)
+            continue
+        end
+
+        for _, stand in ipairs(CachedRestaurant:CollectSubclass("OrderStand")) do
+            if not stand:IsLocal() then
+                continue
+            end
+
+            local orderList = stand:GetSession("OrderList")
+            if orderList and #orderList > 0 then
+                local targetCustomerId = orderList[1][1]
+                if targetCustomerId then
+                    TeleportToEntity(stand) -- v3.5: instant TP + unanchor fix
+                    task.wait(TP_SETTLE_DELAY)
+
+                    pcall(function()
+                        stand:Invoke("TakeTicketPlayer", targetCustomerId)
+                        Log("✓ Took cooking ticket")
+                    end)
+                    task.wait(0.1)
+                    break
+                end
+            end
+        end
+    end
+end)
+
+-- AUTO DISHWASHER
+local AutoDishwasherEnabled = false
+
+-- ============================================================
+-- v2.6: Deteksi dishwasher/sink penuh (ACCURATE), disamain persis kayak
+-- "JinHub Auto Dishwasher (Fixed)" yang dikasih user.
+--
+-- Dulu GetDishwasherEntity() gak pernah cek kapasitas sama sekali --
+-- begitu ada dishwasher (TargetDishwasherId, punya sendiri, atau
+-- fallback manapun), langsung dipakai tanpa peduli udah penuh atau
+-- belum. Kalau semua dishwasher penuh, player tetap TP & coba
+-- DepositDishPlayer yang gagal diam-diam (server nolak), lalu loop
+-- ulang lagi 0.3 detik kemudian -- gak pernah idle.
+--
+-- Sekarang: isDishwasherFull() pakai ClientDishwasher.ComputeCapacity()
+-- + GetSession("ReservedCount") + GetSession("CompletionTimestamp")
+-- buat hitung slot yang lagi kepake (reserved + yang masih aktif
+-- nyuci), dibandingin ke capacity. GetDishwasherEntity() sekarang:
+--   1. Sticky target -- tetep pake TargetDishwasherId LAMA selama itu
+--      belum penuh (biar gak lompat-lompat target tiap tick)
+--   2. Kalau sticky target penuh/gak ada -> prioritas dishwasher milik
+--      sendiri yang belum penuh
+--   3. Fallback -> dishwasher MANAPUN yang belum penuh
+--   4. Semua penuh -> return nil, loop di bawah auto-idle (gak TP)
+-- ============================================================
+local function IsDishwasherFull(dishwasher)
+    local ClientDishwasher = GetClientDishwasher()
+    if not ClientDishwasher or not ClientDishwasher.ComputeCapacity then
+        return true -- gagal load module -> anggap penuh, skip biar aman
+    end
+
+    local ok, capacity = pcall(ClientDishwasher.ComputeCapacity, dishwasher)
+    if not ok or not capacity then
+        return true -- gagal baca capacity -> anggap penuh, skip biar aman
+    end
+
+    local okReserved, reserved = pcall(function()
+        return dishwasher:GetSession("ReservedCount")
+    end)
+    reserved = (okReserved and reserved) or 0
+
+    local okTs, completionTs = pcall(function()
+        return dishwasher:GetSession("CompletionTimestamp")
+    end)
+
+    local activeCount = 0
+    if okTs and completionTs and workspace:GetServerTimeNow() < completionTs then
+        activeCount = 1
+    end
+
+    return (reserved + activeCount) >= capacity
+end
+
+local function GetDishwasherEntity()
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    if not CachedRestaurant then
+        return nil
+    end
+
+    -- Sticky target: tetep pake target lama SELAMA belum penuh
+    local dishwasherId = LocalPlayer:GetAttribute("TargetDishwasherId")
+    if dishwasherId then
+        local entity = CachedRestaurant:GetEntity(dishwasherId)
+        if entity and not IsDishwasherFull(entity) then
+            return entity
+        end
+    end
+
+    -- Prioritas: dishwasher MILIK SENDIRI yang belum penuh
+    for _, dishwasher in ipairs(CachedRestaurant:CollectSubclass("Dishwasher")) do
+        local okLocal, isLocal = pcall(function()
+            return dishwasher:IsLocal()
+        end)
+        if okLocal and isLocal and not IsDishwasherFull(dishwasher) then
+            return dishwasher
+        end
+    end
+
+    -- Fallback: dishwasher MANAPUN yang belum penuh
+    for _, dishwasher in ipairs(CachedRestaurant:CollectSubclass("Dishwasher")) do
+        if not IsDishwasherFull(dishwasher) then
+            return dishwasher
+        end
+    end
+
+    return nil -- semua penuh / gak ada dishwasher
+end
+
+local function GetDirtySeat()
+    if not CachedRestaurant then
+        return nil
+    end
+    for _, seat in ipairs(CachedRestaurant:CollectSubclass("Seat")) do
+        local okDirty, isDirty = pcall(function()
+            return seat:GetSession("DirtyDish")
+        end)
+        if okDirty and isDirty then
+            return seat
+        end
+    end
+    return nil
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+
+        if not AutoDishwasherEnabled then
+            continue
+        end
+
+        if not CachedRestaurant then
+            CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+        end
+
+        if not CachedRestaurant then
+            continue
+        end
+
+        if LocalPlayer:GetAttribute("HoldingDirtyDish") then
+            local dishwasher = GetDishwasherEntity()
+            if dishwasher then
+                TeleportToEntity(dishwasher) -- v3.5: instant TP + unanchor fix
+                task.wait(TP_SETTLE_DELAY)
+
+                pcall(function()
+                    dishwasher:Invoke("DepositDishPlayer")
+                    Log("✓ Deposited dirty dish")
+                end)
+                task.wait(0.1)
+            else
+                -- Semua dishwasher penuh -> auto-idle, JANGAN TP kemana-mana.
+                -- Nunggu lebih lama biar gak spam-cek capacity tiap 0.3s.
+                task.wait(1.5)
+            end
+            continue
+        end
+
+        local seat = GetDirtySeat()
+        if seat then
+            TeleportToEntity(seat) -- v3.5: instant TP + unanchor fix
+            task.wait(TP_SETTLE_DELAY)
+
+            pcall(function()
+                seat:Invoke("TakeDirtyDishPlayer")
+                Log("✓ Took dirty dish from seat")
+            end)
+            task.wait(0.1)
+        else
+            task.wait(1)
+        end
+    end
+end)
+
+-- ============================================================
+-- AUTO BUY MISSING ITEMS + LOAD LAYOUT (v3.0)
+--
+-- Trigger: dipanggil SEKALI otomatis begitu skill Service (panel Skills)
+-- nyampe Level 10 -- dipicu bareng monitor AUTO STOP di bawah, pakai
+-- Config.LayoutCode (text yang di-paste di textbox GUI).
+--
+-- Pattern disamain PERSIS kayak script "AUTO BUY MISSING ITEMS + LOAD
+-- LAYOUT" yang dikasih user:
+--   1. EntityItemMap/WallItemMap dibangun dari Item directory (item yang
+--      punya tag "Buildable"), key = LinkedEntityId/LinkedWallId
+--   2. computeRequiredCounts() ngitung kebutuhan per item dari
+--      layoutData.Entities/Walls (via LayoutsCmds.GetData setelah
+--      Layouts_Import ke slot kosong sementara)
+--   3. tryBuyItem() cek Shop.MeetsItemRequirements -> Shop.GetOffersRemaining
+--      (stock) -> Shop.CanAfford, baru ShopCmds.Purchase(item._id)
+--   4. Setelah semua item kekumpul (atau sebagian, tetap lanjut),
+--      Network.Invoke("Layouts_Load", code), lalu Layouts_Delete slot
+--      sementara-nya
+--
+-- Ini TERPISAH dari Step 2/3 lama (ImportLayout/CheckWheatAndApplyLayout
+-- yang masih pakai loadstring) -- fitur ini jalan independen begitu
+-- skill Service Level 10 tercapai, gak perlu nunggu Step tertentu.
+-- ============================================================
+local AutoLoadLayoutBusy = false
+
+local function BuildLayoutItemMaps()
+    local ItemDirectory = GetItemDirectory()
+    local ItemUtil = GetItemUtilModule()
+    local entityMap, wallMap = {}, {}
+
+    if not ItemDirectory or not ItemUtil then
+        return entityMap, wallMap
+    end
+
+    for _, item in pairs(ItemDirectory) do
+        local okTag, hasTag = pcall(function()
+            return ItemUtil.HasTag(item, "Buildable")
+        end)
+        if okTag and hasTag then
+            if item.LinkedEntityId then
+                entityMap[item.LinkedEntityId] = item
+            end
+            if item.LinkedWallId then
+                wallMap[item.LinkedWallId] = item
+            end
+        end
+    end
+
+    return entityMap, wallMap
+end
+
+local function ComputeLayoutRequiredCounts(layoutData)
+    local required = {}
+    if not layoutData then
+        return required
+    end
+
+    local entityMap, wallMap = BuildLayoutItemMaps()
+
+    for _, e in ipairs(layoutData.Entities or {}) do
+        local item = entityMap[e.DirId]
+        if item then
+            required[item] = (required[item] or 0) + 1
+        end
+    end
+    for _, w in ipairs(layoutData.Walls or {}) do
+        local item = wallMap[w.DirId]
+        if item then
+            required[item] = (required[item] or 0) + 1
+        end
+    end
+
+    return required
+end
+
+local function FindFreeLayoutSlot()
+    local Saving = GetSaving()
+    local LayoutsType = GetLayoutsTypeModule()
+    if not Saving or not LayoutsType then
+        return nil
+    end
+
+    local ok, save = pcall(function()
+        return Saving.Get()
+    end)
+    if not ok or not save or not save.Layouts then
+        return nil
+    end
+
+    for i = 1, LayoutsType.MaxSlots do
+        if not save.Layouts[tostring(i)] then
+            return i
+        end
+    end
+    return nil
+end
+
+local function WaitForLayoutData(slot, timeout)
+    timeout = timeout or 10
+    local LayoutsCmds = GetLayoutsCmds()
+    if not LayoutsCmds then
+        return nil
+    end
+
+    local start = tick()
+    while tick() - start < timeout do
+        local ok, data = pcall(function()
+            return LayoutsCmds.GetData(slot)
+        end)
+        if ok and data then
+            return data
+        end
+        task.wait(0.25)
+    end
+    return nil
+end
+
+local function TryBuyLayoutItem(item)
+    local Shop = GetShopModule()
+    local ShopCmds = GetShopCmdsModule()
+    if not Shop or not ShopCmds then
+        return false, "Shop module gak ke-load"
+    end
+
+    local okReq, meetsReq = pcall(function()
+        return Shop.MeetsItemRequirements(LocalPlayer, item)
+    end)
+    if not okReq or not meetsReq then
+        return false, "item terkunci (requirement belum kepenuhin)"
+    end
+
+    local okOffers, offers = pcall(function()
+        return Shop.GetOffersRemaining(LocalPlayer)
+    end)
+    local offer = okOffers and offers and offers[item]
+    if not offer or offer.Quantity <= 0 then
+        return false, "stock shop lagi habis"
+    end
+
+    local okAfford, canAfford = pcall(function()
+        return Shop.CanAfford(LocalPlayer, item)
+    end)
+    if not okAfford or not canAfford then
+        return false, "cash/diamond gak cukup"
+    end
+
+    local ok, err = pcall(function()
+        return ShopCmds.Purchase(item._id)
+    end)
+    return ok, err
+end
+
+local function BuyMissingLayoutItems(required)
+    local InventoryCmds = GetInventoryCmds()
+    local allBought = true
+
+    for item, needed in pairs(required) do
+        local owned = 0
+        if InventoryCmds then
+            pcall(function()
+                owned = InventoryCmds.Count(item) or 0
+            end)
+        end
+        local shortage = needed - owned
+
+        for _ = 1, shortage do
+            local ok, err = TryBuyLayoutItem(item)
+            if not ok then
+                allBought = false
+                Log(string.format("⚠ [AutoLoadLayout] Gagal beli '%s': %s",
+                    item.DisplayName or item._id, tostring(err)))
+                break
+            end
+            Log(string.format("✓ [AutoLoadLayout] Bought: %s", item.DisplayName or item._id))
+            task.wait(0.3)
+        end
+    end
+
+    return allBought
+end
+
+local function AutoLoadLayoutWithBuy(code)
+    if AutoLoadLayoutBusy then
+        return
+    end
+    if not code or code:match("^%s*$") or code == "Paste Layout Code Here..." then
+        Log("⚠ [AutoLoadLayout] Layout code kosong, skip")
+        return
+    end
+
+    local LayoutsCmds = GetLayoutsCmds()
+    local Network = GetNetwork()
+    if not LayoutsCmds or not Network then
+        Log("⚠ [AutoLoadLayout] LayoutsCmds/Network module gak ke-load")
+        return
+    end
+
+    local okUnlocked, unlocked = pcall(function()
+        return LayoutsCmds.IsUnlocked()
+    end)
+    if not okUnlocked or not unlocked then
+        Log("⚠ [AutoLoadLayout] Layouts belum unlock (level Service kurang)")
+        return
+    end
+
+    AutoLoadLayoutBusy = true
+    Log("🏗️ [AutoLoadLayout] Mulai cek & beli item yang kurang buat layout...")
+
+    task.spawn(function()
+        local freeSlot = FindFreeLayoutSlot()
+        if not freeSlot then
+            Log("⚠ [AutoLoadLayout] Semua slot layout penuh, gak ada slot kosong buat import sementara")
+            AutoLoadLayoutBusy = false
+            return
+        end
+
+        local importOk, importErr = Network.Invoke("Layouts_Import", freeSlot, code)
+        if not importOk then
+            Log("⚠ [AutoLoadLayout] Gagal import code layout: " .. tostring(importErr))
+            AutoLoadLayoutBusy = false
+            return
+        end
+
+        local data = WaitForLayoutData(freeSlot, 10)
+        if not data then
+            Log("⚠ [AutoLoadLayout] Timeout nunggu data layout ke-sync")
+            pcall(Network.Invoke, "Layouts_Delete", freeSlot)
+            AutoLoadLayoutBusy = false
+            return
+        end
+
+        local required = ComputeLayoutRequiredCounts(data)
+        local gotEverything = BuyMissingLayoutItems(required)
+
+        if not gotEverything then
+            Log("⚠ [AutoLoadLayout] Sebagian item gak berhasil dibeli, tetep nyoba load...")
+        end
+
+        local loadOk, loadErr = Network.Invoke("Layouts_Load", code)
+        if loadOk then
+            Log("✓ [AutoLoadLayout] Layout berhasil di-load (reconnecting...)")
+        else
+            Log("⚠ [AutoLoadLayout] Gagal load layout: " .. tostring(loadErr))
+        end
+
+        pcall(Network.Invoke, "Layouts_Delete", freeSlot)
+        AutoLoadLayoutBusy = false
+    end)
+end
+
+-- ============================================================
+-- (v2.9/v3.0 REMOVED) Watcher lama "matiin base loop di Service skill
+-- Level 10" dan "auto-trigger AutoLoadLayoutWithBuy(f961465c2d76)" udah
+-- DIGANTI TOTAL sama sistem v3.1 "LAYOUT PREP PHASE" di bawah (setelah
+-- modul Furniture & Wheat, karena butuh helper function dari situ).
+-- Base restaurant loop (Sit/TakeOrder/Cooking/Serve/Dish) SEKARANG TETAP
+-- JALAN terus -- gak lagi dimatiin cuma karena skill Service level 10.
+-- ============================================================
+
+-- AUTO CLAIM EARNINGS (Cash Register / Tip Jar / Ice Cream Cart)
+-- Dipakai buat quest type 3 (Earn $). Kumpulin entity yang punya saldo > 0,
+-- TP ke belakang tiap entity, settle, invoke claim. Pattern disamain kayak
+-- AutoDishwasher di atas.
+local AutoClaimEarningsEnabled = false
+
+local function GetClaimableEntities(subclassName, cashKeys)
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    if not CachedRestaurant then
+        return {}
+    end
+
+    local list = {}
+    for _, entity in ipairs(CachedRestaurant:CollectSubclass(subclassName)) do
+        local ok, total = pcall(function()
+            local sum = 0
+            for _, key in ipairs(cashKeys) do
+                sum = sum + (entity:GetSave(key) or 0)
+            end
+            return sum
+        end)
+        if ok and total and total > 0 then
+            table.insert(list, entity)
+        end
+    end
+    return list
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+
+        if not AutoClaimEarningsEnabled then
+            continue
+        end
+
+        local registers = GetClaimableEntities("CashRegister", {"Cash", "CashOffline"})
+        for _, register in ipairs(registers) do
+            TeleportToEntity(register) -- v3.5: instant TP + unanchor fix
+            task.wait(TP_SETTLE_DELAY)
+            pcall(function()
+                register:Invoke("CashRegisterClaim")
+                Log("✓ Claimed cash register")
+            end)
+            task.wait(0.15)
+        end
+
+        local tipJars = GetClaimableEntities("TipJar", {"Cash"})
+        for _, jar in ipairs(tipJars) do
+            TeleportToEntity(jar) -- v3.5: instant TP + unanchor fix
+            task.wait(TP_SETTLE_DELAY)
+            pcall(function()
+                jar:Invoke("TipJarClaim")
+                Log("✓ Claimed tip jar")
+            end)
+            task.wait(0.15)
+        end
+
+        local carts = GetClaimableEntities("IceCreamCart", {"Cash"})
+        for _, cart in ipairs(carts) do
+            TeleportToEntity(cart) -- v3.5: instant TP + unanchor fix
+            task.wait(TP_SETTLE_DELAY)
+            pcall(function()
+                cart:Invoke("IceCreamCartClaim")
+                Log("✓ Claimed ice cream cart")
+            end)
+            task.wait(0.15)
+        end
+
+        if #registers == 0 and #tipJars == 0 and #carts == 0 then
+            task.wait(1)
+        end
+    end
+end)
+
+-- COMPLETE QUEST OBJECTIVE
+-- Cook (Cooking_StartCook) masih dipakai; Serve/Sit/TakeOrder ditangani via
+-- background loop, dan Hire (dulu "BuyStaff" hardcoded "Cleaner") sudah
+-- diganti HireEmployeeFromQuest() di atas.
+local function CompleteQuestObjective(questName, objectiveType)
+    local success = false
+
+    if objectiveType == "Cook" then
+        local Network = GetNetwork()
+        if Network then
+            pcall(function()
+                Network.Invoke("Cooking_StartCook")
+                success = true
+            end)
+        end
+    end
+
+    return success
+end
+
+-- ============================================================
+-- AUTO SHOP PURCHASE
+-- ============================================================
+local function PurchaseItemFromShop(itemName, quantity)
+    quantity = quantity or 1
+    local purchased = 0
+
+    local ok = pcall(function()
+        local ShopCmds = require(ReplicatedStorage.Framework.Client.ShopCmds)
+        local Shop = require(ReplicatedStorage.Framework.Universal.Shop)
+
+        if not ShopCmds or not Shop then
+            Log("⚠ Shop modules not loaded")
+            return
+        end
+
+        local offers = Shop.GetOffersRemaining(LocalPlayer)
+        if not offers then
+            Log("⚠ Shop offers not available")
+            return
+        end
+
+        local OfferLookup = {}
+        for itemDir, info in pairs(offers) do
+            OfferLookup[itemDir._id] = itemDir
+        end
+
+        local itemDir = OfferLookup[itemName]
+        if not itemDir then
+            Log(string.format("⚠ Item '%s' not found in shop", itemName))
+            return
+        end
+
+        if not Shop.MeetsItemRequirements(LocalPlayer, itemDir) then
+            Log(string.format("⚠ Requirements not met for '%s'", itemName))
+            return
+        end
+
+        while purchased < quantity do
+            offers = Shop.GetOffersRemaining(LocalPlayer)
+            local stock = offers[itemDir]
+
+            if not stock or stock.Quantity <= 0 then
+                Log(string.format("⚠ Out of stock: '%s' (%d/%d purchased)", itemName, purchased, quantity))
+                break
+            end
+
+            if not Shop.MeetsItemRequirements(LocalPlayer, itemDir) then
+                Log(string.format("⚠ Requirements no longer met for '%s' (%d/%d purchased)", itemName, purchased, quantity))
+                break
+            end
+
+            local success = pcall(function()
+                ShopCmds.Purchase(itemName)
+            end)
+
+            if not success then
+                Log(string.format("⚠ Purchase failed: '%s'", itemName))
+                break
+            end
+
+            purchased = purchased + 1
+            Log(string.format("✓ Purchased: %s (%d/%d)", itemName, purchased, quantity))
+            task.wait(0.25)
+        end
+    end)
+
+    if not ok then
+        Log("⚠ Error during purchase attempt for '" .. tostring(itemName) .. "'")
+    end
+
+    return purchased > 0
+end
+
+-- ============================================================
+-- AUTO BUY PLOTS (v2.7)
+--
+-- Status/purchase logic disamain PERSIS kayak script "AUTO BUY PLOTS"
+-- yang dikasih user: getStatus() ngecek Purchased/Purchasable/
+-- Renderable/Hidden lewat rest:IsPackagePurchased(), GamepassRequired,
+-- RequireAllPackages, UpgradeRequired (ProgressionUtil.IsGenericUnlocked),
+-- RequiredSkillId+RequiredSkillLevel (SkillsCmds.GetLevel), dan urutan
+-- Order buat nentuin package berikutnya yang "Renderable". getCurrencyAmount()
+-- baca CurrencyId+CurrencyAmount atau tabel Currency di package.
+--
+-- INDEPENDEN: jalan terus di background (poll 2 detik, sama kayak
+-- reference), gak nunggu Step/quest tertentu -- begitu status package
+-- jadi Purchasable & cash cukup, langsung di-invoke
+-- "Restaurant_PurchasePackage". Config.AutoBuyPlotIds kosong = beli
+-- SEMUA package yang Purchasable; diisi array id = cuma beli yang ada
+-- di list itu.
+-- ============================================================
+local AUTO_BUY_PLOTS_STATUS = { Purchased = 1, Purchasable = 2, Renderable = 3, Hidden = 4 }
+local AUTO_BUY_PLOTS_REMOTE_KEY = "Restaurant_PurchasePackage"
+
+local AutoBuyPlotsEnabled = false
+
+local function GetSortedPlotPackages()
+    local EntityPackage = GetEntityPackageModule()
+    if not EntityPackage then
+        return {}
+    end
+
+    local list = {}
+    for _, pkg in pairs(EntityPackage) do
+        if typeof(pkg) == "table" and pkg._id and not pkg.GamepassRequired then
+            table.insert(list, pkg)
+        end
+    end
+    table.sort(list, function(a, b)
+        return (a.Order or math.huge) < (b.Order or math.huge)
+    end)
+    return list
+end
+
+local function GetPlotPackageStatus(player, pkg)
+    local EntityPackage = GetEntityPackageModule()
+    local Types = GetEntityPackageTypesModule()
+    local ProgressionUtil = GetProgressionUtil()
+    local SkillsCmds = GetSkillsCmds()
+
+    if not EntityPackage or not Types or not ProgressionUtil or not SkillsCmds or not CachedClientRestaurant then
+        return AUTO_BUY_PLOTS_STATUS.Hidden
+    end
+
+    local ok, rest = pcall(function()
+        return CachedClientRestaurant.GetByPlayer(player)
+    end)
+    if not ok or not rest then
+        return AUTO_BUY_PLOTS_STATUS.Hidden
+    end
+
+    if pkg.GamepassRequired then
+        if rest:IsPackagePurchased(pkg) then
+            return AUTO_BUY_PLOTS_STATUS.Purchased
+        end
+        return AUTO_BUY_PLOTS_STATUS.Hidden
+    end
+
+    local function allOtherPurchased()
+        return Types.AllOtherPackagesPurchased(pkg, function(other)
+            return rest:IsPackagePurchased(other)
+        end)
+    end
+
+    if pkg.RequireAllPackages then
+        if rest:IsPackagePurchased(pkg) then
+            return AUTO_BUY_PLOTS_STATUS.Purchased
+        end
+        if not pkg.UpgradeRequired then
+            if allOtherPurchased() then
+                return AUTO_BUY_PLOTS_STATUS.Purchasable
+            end
+            return AUTO_BUY_PLOTS_STATUS.Hidden
+        end
+        if not ProgressionUtil.IsGenericUnlocked(player, pkg.UpgradeRequired) then
+            return AUTO_BUY_PLOTS_STATUS.Hidden
+        end
+        if allOtherPurchased() then
+            return AUTO_BUY_PLOTS_STATUS.Purchasable
+        end
+        return AUTO_BUY_PLOTS_STATUS.Hidden
+    end
+
+    local unlocked = (not pkg.UpgradeRequired) or ProgressionUtil.IsGenericUnlocked(player, pkg.UpgradeRequired)
+
+    if pkg.RequiredSkillId and pkg.RequiredSkillLevel then
+        local level = SkillsCmds.GetLevel(pkg.RequiredSkillId, player)
+        if level < pkg.RequiredSkillLevel then
+            unlocked = false
+        end
+    end
+
+    local highestPurchasedOrder = 0
+    for _, other in pairs(EntityPackage) do
+        if not other.GamepassRequired and not other.RequiredSkillId
+            and highestPurchasedOrder < other.Order and rest:IsPackagePurchased(other) then
+            highestPurchasedOrder = other.Order
+        end
+    end
+
+    if rest:IsPackagePurchased(pkg) then
+        return AUTO_BUY_PLOTS_STATUS.Purchased
+    end
+    if unlocked then
+        return AUTO_BUY_PLOTS_STATUS.Purchasable
+    end
+    if pkg.Order == highestPurchasedOrder + 1 then
+        return AUTO_BUY_PLOTS_STATUS.Renderable
+    end
+    return AUTO_BUY_PLOTS_STATUS.Hidden
+end
+
+local function GetPlotPackageCurrencyAmount(pkg)
+    if pkg.CurrencyId and pkg.CurrencyAmount then
+        return pkg.CurrencyId, pkg.CurrencyAmount
+    end
+    if pkg.Currency then
+        for id, amount in pairs(pkg.Currency) do
+            return id, amount
+        end
+    end
+    return nil, 0
+end
+
+task.spawn(function()
+    while task.wait(2) do
+        if not AutoBuyPlotsEnabled or not Running then
+            continue
+        end
+
+        local Network = GetNetwork()
+        local CurrencyCmds = GetCurrencyCmds()
+        if not Network or not CurrencyCmds then
+            continue
+        end
+
+        local allowedSet = nil
+        if #Config.AutoBuyPlotIds > 0 then
+            allowedSet = {}
+            for _, id in ipairs(Config.AutoBuyPlotIds) do
+                allowedSet[id] = true
+            end
+        end
+
+        for _, pkg in ipairs(GetSortedPlotPackages()) do
+            if allowedSet and not allowedSet[pkg._id] then
+                continue
+            end
+
+            if GetPlotPackageStatus(LocalPlayer, pkg) ~= AUTO_BUY_PLOTS_STATUS.Purchasable then
+                continue
+            end
+
+            local currencyId, price = GetPlotPackageCurrencyAmount(pkg)
+            if currencyId then
+                local cash = 0
+                pcall(function() cash = CurrencyCmds.Get(currencyId) or 0 end)
+                if cash < price then
+                    continue
+                end
+            end
+
+            pcall(function()
+                Network.Invoke(AUTO_BUY_PLOTS_REMOTE_KEY, pkg._id)
+                Log(string.format("✓ [AutoBuyPlots] Purchased: %s", pkg.Title or pkg._id))
+            end)
+
+            task.wait(0.5)
+        end
+    end
+end)
+
+-- ============================================================
+-- AUTO BUY SHOP (v2.5) - Generic multi-item shop buyer.
+--
+-- Stock detection & buy pattern disamain PERSIS kayak script "BAGIAN
+-- SHOP" (ShopKeeper) yang dikasih user:
+--   1. Bangun OfferLookup dari Shop.GetOffersRemaining() (key = itemDir._id)
+--   2. Buat tiap item target: cek requirement dulu (MeetsItemRequirements)
+--   3. Baru masuk while-loop beli TERUS-MENERUS selama offers[itemDir]
+--      punya Quantity > 0 & requirement masih kepenuhi
+--   4. Begitu stock.Quantity <= 0 atau requirement gak kepenuhi lagi ->
+--      break, lanjut ke item berikutnya
+--
+-- Outer loop (task.wait(0.9), SAMA kayak reference) cuma nentuin kapan
+-- mulai nge-scan ulang offers/list -- BUKAN buy rate. Pembelian
+-- aktualnya jalan continuous (delay 0.25s antar purchase) selama stock
+-- masih ada, dan langsung stop detik itu juga pas stock habis, jadi
+-- efeknya "auto buy hanya saat ada stock atau restock" seperti diminta,
+-- bukan nembak Purchase() buta tiap 2 detik.
+-- ============================================================
+local AutoBuyShopEnabled = false
+
+local function ResolveShopBuyList()
+    local list = {}
+    local seen = {}
+
+    for _, itemName in ipairs(Config.ShopBuyItems) do
+        if not seen[itemName] then
+            seen[itemName] = true
+            table.insert(list, itemName)
+        end
+    end
+
+    if #Config.ShopBuyCategories > 0 then
+        local ItemDirectory = GetItemDirectory()
+        if ItemDirectory then
+            local categorySet = {}
+            for _, cat in ipairs(Config.ShopBuyCategories) do
+                categorySet[cat] = true
+            end
+
+            for itemName, itemData in pairs(ItemDirectory) do
+                if categorySet[itemData.ShopCategory] and itemData.ShopProbability and itemData.ShopQuantity then
+                    if not seen[itemName] then
+                        seen[itemName] = true
+                        table.insert(list, itemName)
+                    end
+                end
+            end
+        end
+    end
+
+    return list
+end
+
+task.spawn(function()
+    while task.wait(0.9) do
+        if not AutoBuyShopEnabled or not Running then
+            continue
+        end
+
+        local ShopBuyList = ResolveShopBuyList()
+        if #ShopBuyList == 0 then
+            continue
+        end
+
+        local okShop, ShopModule = pcall(function()
+            return require(ReplicatedStorage.Framework.Universal.Shop)
+        end)
+        local okCmds, ShopCmdsModule = pcall(function()
+            return require(ReplicatedStorage.Framework.Client.ShopCmds)
+        end)
+
+        if not okShop or not okCmds or not ShopModule or not ShopCmdsModule then
+            continue
+        end
+
+        local offers = ShopModule.GetOffersRemaining(LocalPlayer)
+        if not offers then
+            continue
+        end
+
+        local OfferLookup = {}
+        for itemDir, info in pairs(offers) do
+            OfferLookup[itemDir._id] = itemDir
+        end
+
+        for _, itemName in ipairs(ShopBuyList) do
+            if not AutoBuyShopEnabled or not Running then
+                break
+            end
+
+            local itemDir = OfferLookup[itemName]
+            if not itemDir then
+                continue
+            end
+
+            if not ShopModule.MeetsItemRequirements(LocalPlayer, itemDir) then
+                continue
+            end
+
+            while AutoBuyShopEnabled and Running do
+                offers = ShopModule.GetOffersRemaining(LocalPlayer)
+                local stock = offers[itemDir]
+
+                if not stock then
+                    break
+                end
+
+                if stock.Quantity <= 0 then
+                    -- Gak ada stock/restock sekarang -> berhenti, biarin
+                    -- tick berikutnya (0.9s) yang ngecek ulang.
+                    break
+                end
+
+                if not ShopModule.MeetsItemRequirements(LocalPlayer, itemDir) then
+                    break
+                end
+
+                local ok = pcall(function()
+                    ShopCmdsModule.Purchase(itemName)
+                end)
+
+                if not ok then
+                    break
+                end
+
+                Log(string.format("✓ [ShopBuy] Purchased: %s", itemName))
+                task.wait(0.25)
+            end
+        end
+    end
+end)
+
+-- ============================================================
+-- AUTO PLACE TABLE & CHAIR (v2.4)
+-- Target: restoran punya total 6 set (1 set = 1 Table + 2 Chair),
+-- dihitung di SELURUH restaurant (semua floor), bukan cuma floor
+-- tempat player berdiri saat ini.
+--
+-- Kalau stock Table/Chair di inventory gak cukup buat capai 6 set,
+-- otomatis coba beli kekurangannya lewat PurchaseItemFromShop (reuse
+-- fungsi yang sama dipakai quest type 2/Purchase). Kalau shop out of
+-- stock atau cash kurang, PurchaseItemFromShop udah otomatis berhenti &
+-- log warning sendiri -- watcher loop di bawah bakal nyoba lagi di tick
+-- berikutnya, jadi efeknya "nunggu" seperti yang diminta, bukan macet.
+--
+-- Pattern placement (anchor + 2 chair di sisi berlawanan, rotasi chair
+-- menghadap table, confirm via WaitForPlacementConfirmed) disamain
+-- persis kayak script Auto Place Table & Chair yang dikasih user.
+-- ============================================================
+local FurnitureConfig = {
+    TableItem = "Wooden Table",
+    ChairItem = "Wooden Chair",
+    TargetSets = 6,
+    PlaceRotation = 0,
+    BuildDebounce = 0.35,
+    RotationOffset = 0, -- kalau abis dites arah Timur/Barat kebalik, ganti ke 180
+}
+
+local FurnitureDirectionToRotation = {
+    ["0_-1"] = 0,   -- table di Utara (Y-1) dari chair
+    ["1_0"] = 90,   -- table di Timur (X+1) dari chair
+    ["0_1"] = 180,  -- table di Selatan (Y+1) dari chair
+    ["-1_0"] = 270, -- table di Barat (X-1) dari chair
+}
+
+local FurnitureOppositeNeighborPairs = {
+    { { 1, 0 }, { -1, 0 } }, -- kanan & kiri
+    { { 0, 1 }, { 0, -1 } }, -- depan & belakang
+}
+
+-- Rotation chair = arah dari chair ke table, biar chair-nya "menghadap" meja.
+local function ComputeChairRotation(chairVoxel, tableVoxel)
+    local dx = tableVoxel.X - chairVoxel.X
+    local dy = tableVoxel.Y - chairVoxel.Y
+    local key = dx .. "_" .. dy
+    local base = FurnitureDirectionToRotation[key] or 0
+    return (base + FurnitureConfig.RotationOffset) % 360
+end
+
+-- "Wooden Table" -> "WoodenTable", dst.
+local function DeriveSubclassName(itemName)
+    if not itemName then
+        return nil
+    end
+    return (itemName:gsub("%s+", ""))
+end
+
+-- Hitung entity subclass yang masih hidup. floor = nil berarti hitung di
+-- SELURUH restaurant (semua floor), bukan cuma 1 floor tertentu.
+local function GetPlacedFurnitureCount(restaurant, subclass, floor)
+    if not subclass then
+        return 0
+    end
+    local ok, entities = pcall(function()
+        if floor then
+            return restaurant:CollectSubclass(subclass, { Floor = floor })
+        end
+        return restaurant:CollectSubclass(subclass)
+    end)
+    if not ok or not entities then
+        return 0
+    end
+
+    local count = 0
+    for _, entity in ipairs(entities) do
+        local okDestroyed, isDestroyed = pcall(function()
+            return entity:IsDestroyed()
+        end)
+        if okDestroyed and not isDestroyed then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function IsReservedFurnitureVoxel(voxel)
+    local Restaurants = GetRestaurantsModule()
+    if not Restaurants then
+        return false
+    end
+    return voxel == Restaurants.EmployeeSpawnVoxel or voxel == Restaurants.DoorwayVoxel
+end
+
+local function GetNonDockPlaceableVoxels(restaurant, floor)
+    local Types = GetEntityTypesModule()
+    local ok, walkable = pcall(function()
+        return restaurant:GetWalkableVoxels()
+    end)
+
+    if not ok or not walkable or not Types then
+        return {}
+    end
+
+    local placeable = {}
+    for _, voxel in ipairs(walkable) do
+        if not IsReservedFurnitureVoxel(voxel) and not IsVoxelOccupied(restaurant, voxel, floor, Types) then
+            local isDock = false
+
+            local okFloor, floorEntity = pcall(function()
+                return restaurant:GetEntityByVoxel(voxel, Types.HeightLevel.Floor, floor)
+            end)
+            if okFloor and floorEntity then
+                local okSub, result = pcall(function()
+                    return floorEntity:IsSubclass("Dock")
+                end)
+                isDock = okSub and result
+            end
+
+            if not isDock then
+                table.insert(placeable, voxel)
+            end
+        end
+    end
+
+    return placeable
+end
+
+-- Lookup cepat by koordinat, buat cek & "pop" tetangga secara O(1).
+local function BuildFurnitureVoxelLookup(voxels)
+    local lookup = {}
+    for _, v in ipairs(voxels) do
+        lookup[v.X .. "_" .. v.Y] = v
+    end
+    return lookup
+end
+
+local function WaitForFurniturePlacementConfirmed(restaurant, voxel, floor, timeout)
+    local Types = GetEntityTypesModule()
+    if not Types then
+        return false
+    end
+
+    local deadline = tick() + (timeout or 1.5)
+    while tick() < deadline do
+        local ok, entity = pcall(function()
+            return restaurant:GetEntityByVoxel(voxel, Types.HeightLevel.Middle, floor)
+        end)
+        if ok and entity then
+            return true
+        end
+        task.wait(0.1)
+    end
+    return false
+end
+
+local function PlaceFurnitureSets(restaurant, voxels, tableItem, chairItem, maxSets, tableStock, chairStock, floor)
+    local Network = GetNetwork()
+    if not Network then
+        Log("⚠ Furniture: Network module not loaded")
+        return 0, {}, {}
+    end
+
+    local lookup = BuildFurnitureVoxelLookup(voxels)
+    local placedSets = 0
+    local skippedAnchors = {}
+    local incompleteAnchors = {}
+
+    for _, anchor in ipairs(voxels) do
+        if placedSets >= maxSets or tableStock <= 0 or chairStock < 2 then
+            break
+        end
+
+        local anchorKey = anchor.X .. "_" .. anchor.Y
+        if lookup[anchorKey] then
+
+            local neighborKeys = nil
+            for _, pair in ipairs(FurnitureOppositeNeighborPairs) do
+                local key1 = (anchor.X + pair[1][1]) .. "_" .. (anchor.Y + pair[1][2])
+                local key2 = (anchor.X + pair[2][1]) .. "_" .. (anchor.Y + pair[2][2])
+                if lookup[key1] and lookup[key2] then
+                    neighborKeys = { key1, key2 }
+                    break
+                end
+            end
+
+            if neighborKeys then
+                lookup[anchorKey] = nil
+
+                task.wait(FurnitureConfig.BuildDebounce)
+
+                pcall(function()
+                    Network.Fire("Build_Place", tableItem, anchor.X, anchor.Y, FurnitureConfig.PlaceRotation, floor)
+                end)
+
+                local tableConfirmed = WaitForFurniturePlacementConfirmed(restaurant, anchor, floor)
+
+                if not tableConfirmed then
+                    table.insert(skippedAnchors, anchor)
+                else
+                    tableStock = tableStock - 1
+
+                    local chairsConfirmed = 0
+                    for i = 1, 2 do
+                        local chairVoxel = lookup[neighborKeys[i]]
+                        lookup[neighborKeys[i]] = nil
+                        local chairRotation = ComputeChairRotation(chairVoxel, anchor)
+
+                        task.wait(FurnitureConfig.BuildDebounce)
+
+                        pcall(function()
+                            Network.Fire("Build_Place", chairItem, chairVoxel.X, chairVoxel.Y, chairRotation, floor)
+                        end)
+
+                        local chairConfirmed = WaitForFurniturePlacementConfirmed(restaurant, chairVoxel, floor, 2)
+
+                        if chairConfirmed then
+                            chairsConfirmed = chairsConfirmed + 1
+                            chairStock = chairStock - 1
+                        end
+                    end
+
+                    if chairsConfirmed >= 2 then
+                        placedSets = placedSets + 1
+                        Log(string.format("✓ Placed furniture set #%d (Table @ %d,%d)", placedSets, anchor.X, anchor.Y))
+                    else
+                        table.insert(incompleteAnchors, { anchor = anchor, chairsConfirmed = chairsConfirmed })
+                    end
+                end
+            else
+                table.insert(skippedAnchors, anchor)
+            end
+        end
+    end
+
+    return placedSets, skippedAnchors, incompleteAnchors
+end
+
+local AutoPlaceFurnitureEnabled = false
+local AutoPlaceFurnitureRunning = false
+
+local function TryAutoPlaceFurniture()
+    if not AutoPlaceFurnitureEnabled or AutoPlaceFurnitureRunning then
+        return
+    end
+
+    -- v2.8: begitu skill Farming ke-unlock, berhenti total beli/place
+    -- Table & Chair -- fokus pindah ke Wheat Plant (lihat modul AUTO
+    -- PLACE WHEAT PLANT di bawah).
+    if IsFarmingSkillUnlocked() then
+        return
+    end
+
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    if not CachedRestaurant then
+        return
+    end
+
+    local TableSubclass = DeriveSubclassName(FurnitureConfig.TableItem)
+    local ChairSubclass = DeriveSubclassName(FurnitureConfig.ChairItem)
+
+    -- Total di SELURUH restaurant (floor = nil), bukan cuma floor player
+    -- berdiri, karena target 6 set ini target restaurant keseluruhan.
+    local PlacedTables = GetPlacedFurnitureCount(CachedRestaurant, TableSubclass, nil)
+    local PlacedChairs = GetPlacedFurnitureCount(CachedRestaurant, ChairSubclass, nil)
+    local PlacedSets = math.min(PlacedTables, math.floor(PlacedChairs / 2))
+    local NeededSets = math.max(0, FurnitureConfig.TargetSets - PlacedSets)
+
+    if NeededSets <= 0 then
+        -- Target 6 set udah tercapai, gak ada yang perlu dikerjain lagi
+        return
+    end
+
+    local TableStock = GetItemStock(FurnitureConfig.TableItem)
+    local ChairStock = GetItemStock(FurnitureConfig.ChairItem)
+
+    local MaxSetsByStock = math.min(NeededSets, TableStock, math.floor(ChairStock / 2))
+
+    if MaxSetsByStock <= 0 then
+        -- Stock inventory gak cukup buat 1 set pun -> coba beli
+        -- kekurangannya dari shop. Kalau shop out-of-stock atau cash
+        -- kurang, PurchaseItemFromShop berhenti & log sendiri; watcher
+        -- loop bakal nyoba lagi tick berikutnya (efeknya "nunggu").
+        local tableNeeded = math.max(0, NeededSets - TableStock)
+        local chairNeeded = math.max(0, (NeededSets * 2) - ChairStock)
+
+        if tableNeeded > 0 then
+            Log(string.format("🪑 Butuh %s x%d buat capai target %d set (stock: %d), coba beli...",
+                FurnitureConfig.TableItem, tableNeeded, FurnitureConfig.TargetSets, TableStock))
+            PurchaseItemFromShop(FurnitureConfig.TableItem, tableNeeded)
+        end
+
+        if chairNeeded > 0 then
+            Log(string.format("🪑 Butuh %s x%d buat capai target %d set (stock: %d), coba beli...",
+                FurnitureConfig.ChairItem, chairNeeded, FurnitureConfig.TargetSets, ChairStock))
+            PurchaseItemFromShop(FurnitureConfig.ChairItem, chairNeeded)
+        end
+
+        return
+    end
+
+    AutoPlaceFurnitureRunning = true
+
+    task.spawn(function()
+        local Floor = GetPlayerFloor(CachedRestaurant)
+        local Voxels = GetNonDockPlaceableVoxels(CachedRestaurant, Floor)
+
+        if #Voxels == 0 then
+            Log("⚠ Furniture: no empty non-dock tiles found on this floor")
+            AutoPlaceFurnitureRunning = false
+            return
+        end
+
+        Log(string.format("🪑 Placing %d furniture set (progress: %d/%d set)",
+            MaxSetsByStock, PlacedSets, FurnitureConfig.TargetSets))
+
+        local PlacedNow, Skipped, Incomplete = PlaceFurnitureSets(
+            CachedRestaurant,
+            Voxels,
+            FurnitureConfig.TableItem,
+            FurnitureConfig.ChairItem,
+            MaxSetsByStock,
+            TableStock,
+            ChairStock,
+            Floor
+        )
+
+        if PlacedNow < MaxSetsByStock then
+            local reasonParts = {}
+            if #Skipped > 0 then
+                table.insert(reasonParts, string.format("%d anchor gak punya pasangan sisi berlawanan yang kosong", #Skipped))
+            end
+            if #Incomplete > 0 then
+                table.insert(reasonParts, string.format("%d Table kepasang tapi Chair-nya gagal/kurang", #Incomplete))
+            end
+            Log(string.format("⚠ Furniture: only %d/%d set placed this pass -- %s",
+                PlacedNow, MaxSetsByStock,
+                #reasonParts > 0 and table.concat(reasonParts, "; ") or "unknown reason"))
+        else
+            Log(string.format("✓ Furniture: %d set placed this pass", PlacedNow))
+        end
+
+        AutoPlaceFurnitureRunning = false
+    end)
+end
+
+local FurnitureWatcherRunning = false
+local function RunFurnitureWatcher()
+    if FurnitureWatcherRunning then
+        return
+    end
+    FurnitureWatcherRunning = true
+
+    task.spawn(function()
+        while AutoPlaceFurnitureEnabled and Running do
+            if not AutoPlaceFurnitureRunning then
+                TryAutoPlaceFurniture()
+            end
+            task.wait(2)
+        end
+        FurnitureWatcherRunning = false
+    end)
+end
+
+-- ============================================================
+-- LAYOUT PREP PHASE (v3.1) -- config, flags, & fungsi deteksi
+--
+-- Fase baru: begitu skill Service Level >=10 DAN quest "Earn $200 Cash"
+-- (quest urutan ke-11) udah selesai, tujuan automation PINDAH dari
+-- ngejar quest ke: tetap jalanin restoran (Sit/TakeOrder/Cooking/Serve/
+-- Dishwasher TETAP nyala, gak dimatiin lagi kayak v2.9 lama) + claim
+-- earnings terus buat modal beli Wheat Plant sampai 168 & Rusty Fridge
+-- sampai 2, lalu load layout "baaa19988c7c".
+--
+-- Deteksi jumlah Wheat Plant yang udah ketanem dilakuin lewat
+-- CollectSubclass("Crop") + cocokin nama model (di-strip " Crop_X"),
+-- SAMA PERSIS kayak cara script "Auto Harvest Crop" yang dikasih user
+-- ngedapetin CropName dari Model.Name. Rusty Fridge dihitung generik
+-- lewat GetPlacedFurnitureCount() (reuse dari modul Furniture di atas).
+-- ============================================================
+local LayoutPrepConfig = {
+    WheatItemName = "Wheat Plant",
+    WheatCropFamilyName = "Wheat", -- prefix nama model crop abis di-strip " Crop_X"; sesuaikan kalau ternyata beda di game
+    WheatTarget = 168,
+    FridgeItemName = "Rusty Fridge",
+    FridgeTarget = 2,
+    LayoutCode = "baaa19988c7c",
+}
+
+local LayoutPrepPhaseActive = false
+local Earn200QuestDone = false
+local QuestAutomationStopped = false
+local LayoutPrepTriggered = false -- guard: Layouts_Load cuma nembak SEKALI
+
+local function CountPlacedWheatCrops()
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    if not CachedRestaurant then
+        return 0
+    end
+
+    local ok, crops = pcall(function()
+        return CachedRestaurant:CollectSubclass("Crop")
+    end)
+    if not ok or not crops then
+        return 0
+    end
+
+    local count = 0
+    for _, crop in ipairs(crops) do
+        local okModel, model = pcall(function()
+            return crop:GetModel()
+        end)
+        if okModel and model then
+            local cropFamily = model.Name:gsub(" Crop_.+", "")
+            if cropFamily == LayoutPrepConfig.WheatCropFamilyName then
+                count = count + 1
+            end
+        end
+    end
+    return count
+end
+
+local function CountPlacedRustyFridges()
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    if not CachedRestaurant then
+        return 0
+    end
+    local subclass = DeriveSubclassName(LayoutPrepConfig.FridgeItemName)
+    return GetPlacedFurnitureCount(CachedRestaurant, subclass, nil)
+end
+
+-- ============================================================
+-- AUTO BUY WHEAT & FRIDGE (v3.3) - INVENTORY ONLY, NO PLACEMENT
+--
+-- CHANGE v3.3: Trigger diganti dari "Service Level 10 + Earn $200 done"
+-- jadi "Farming skill unlock level 1+". Begitu Farming level >=1,
+-- langsung mulai beli Wheat Plant sampai 168 di inventory.
+-- ============================================================
+local WheatPlantConfig = {
+    ItemName = "Wheat Plant",
+}
+
+local AutoBuyWheatEnabled = false
+local AutoBuyWheatRunning = false
+
+local function TryAutoBuyWheat()
+    if not AutoBuyWheatEnabled or AutoBuyWheatRunning then
+        return
+    end
+
+    -- v3.3: Ganti trigger jadi Farming skill level >= 1
+    local farmingLevel = GetFarmingSkillLevel()
+    if farmingLevel < 1 then
+        return -- Farming belum unlock
+    end
+
+    local CurrentStock = GetItemStock(WheatPlantConfig.ItemName)
+    local StillNeeded = LayoutPrepConfig.WheatTarget - CurrentStock
+    
+    if StillNeeded <= 0 then
+        return -- target 168 di inventory udah tercapai
+    end
+
+    AutoBuyWheatRunning = true
+
+    task.spawn(function()
+        Log(string.format("🌾 Beli %s, target inventory: %d/%d (Farming level %d)", 
+            WheatPlantConfig.ItemName, CurrentStock, LayoutPrepConfig.WheatTarget, farmingLevel))
+        
+        -- Beli kekurangannya
+        PurchaseItemFromShop(WheatPlantConfig.ItemName, StillNeeded)
+        
+        task.wait(1)
+        AutoBuyWheatRunning = false
+    end)
+end
+
+local WheatBuyWatcherRunning = false
+local function RunWheatBuyWatcher()
+    if WheatBuyWatcherRunning then
+        return
+    end
+    WheatBuyWatcherRunning = true
+
+    task.spawn(function()
+        while AutoBuyWheatEnabled and Running do
+            if not AutoBuyWheatRunning then
+                TryAutoBuyWheat()
+            end
+            task.wait(2)
+        end
+        WheatBuyWatcherRunning = false
+    end)
+end
+
+-- ============================================================
+-- AUTO BUY RUSTY FRIDGE (v3.3) - INVENTORY ONLY, NO PLACEMENT
+--
+-- v3.3: Trigger tetap pake LayoutPrepPhaseActive (Service 10 + Earn $200),
+-- beda dari Wheat yang mulai begitu Farming unlock. Fridge baru dibeli
+-- setelah fase Layout Prep aktif.
+-- ============================================================
+local AutoBuyFridgeEnabled = false
+local AutoBuyFridgeRunning = false
+
+local function TryAutoBuyFridge()
+    if not AutoBuyFridgeEnabled or AutoBuyFridgeRunning then
+        return
+    end
+
+    if not LayoutPrepPhaseActive then
+        return
+    end
+
+    local CurrentStock = GetItemStock(LayoutPrepConfig.FridgeItemName)
+    local StillNeeded = LayoutPrepConfig.FridgeTarget - CurrentStock
+    
+    if StillNeeded <= 0 then
+        return -- target 2 di inventory udah tercapai
+    end
+
+    AutoBuyFridgeRunning = true
+
+    task.spawn(function()
+        Log(string.format("🧊 Beli %s, target inventory: %d/%d",
+            LayoutPrepConfig.FridgeItemName, CurrentStock, LayoutPrepConfig.FridgeTarget))
+        
+        PurchaseItemFromShop(LayoutPrepConfig.FridgeItemName, StillNeeded)
+        
+        task.wait(1)
+        AutoBuyFridgeRunning = false
+    end)
+end
+
+local FridgeBuyWatcherRunning = false
+local function RunFridgeBuyWatcher()
+    if FridgeBuyWatcherRunning then
+        return
+    end
+    FridgeBuyWatcherRunning = true
+
+    task.spawn(function()
+        while AutoBuyFridgeEnabled and Running do
+            if not AutoBuyFridgeRunning then
+                TryAutoBuyFridge()
+            end
+            task.wait(2)
+        end
+        FridgeBuyWatcherRunning = false
+    end)
+end
+
+-- ============================================================
+-- LAYOUT PREP PHASE ORCHESTRATOR (v3.3)
+--
+-- CHANGE v3.3:
+-- - Wheat Plant mulai dibeli begitu Farming skill unlock level 1+
+--   (INDEPENDEN dari fase Layout Prep)
+-- - Rusty Fridge baru dibeli setelah fase Layout Prep aktif (Service 10 + Earn $200)
+-- - Load layout trigger: 168 Wheat + 2 Fridge di inventory
+-- - ANTI RECONNECT-LOOP: cek Wheat & Fridge di MAP, bukan inventory
+-- ============================================================
+local AutoHarvestCropEnabled = false
+
+-- Monitor Wheat Buy - independen, aktif begitu Farming unlock
+task.spawn(function()
+    while true do
+        task.wait(2)
+
+        if not Running then
+            continue
+        end
+
+        -- Auto buy Wheat dimulai begitu Farming skill level >= 1
+        if GetFarmingSkillLevel() >= 1 and not AutoBuyWheatEnabled then
+            AutoBuyWheatEnabled = true
+            RunWheatBuyWatcher()
+            Log("🌾 Farming skill unlocked! Auto Buy Wheat Plant enabled (target: 168)")
+        end
+    end
+end)
+
+-- Monitor Layout Prep Phase
+task.spawn(function()
+    while true do
+        task.wait(2)
+
+        if not Running then
+            continue
+        end
+
+        if not LayoutPrepPhaseActive then
+            local serviceLevel = GetServiceSkillLevel()
+
+            if serviceLevel >= 10 and not Earn200QuestDone then
+                -- Fallback detection: quest Earn $200 gak ada lagi di
+                -- daftar aktif -> anggap udah pernah selesai
+                local activeGoals = GetActiveGoals()
+                local stillPending = false
+                for _, g in pairs(activeGoals) do
+                    if g.Type == 3 and g.Amount == 200 then
+                        stillPending = true
+                        break
+                    end
+                end
+                if not stillPending then
+                    Earn200QuestDone = true
+                    Log("🏁 Quest Earn $200 gak ketemu di daftar aktif -> anggap udah pernah selesai (fallback detection)")
+                end
+            end
+
+            if serviceLevel >= 10 and Earn200QuestDone then
+                LayoutPrepPhaseActive = true
+                QuestAutomationStopped = true
+                AutoClaimEarningsEnabled = true
+                
+                -- v3.3: Enable auto-BUY Fridge (Wheat sudah aktif dari Farming unlock)
+                AutoBuyFridgeEnabled = true
+                RunFridgeBuyWatcher()
+
+                -- ANTI RECONNECT-LOOP: cek Wheat & Fridge di MAP (bukan inventory)
+                local wheatOnMap = CountPlacedWheatCrops()
+                local fridgeOnMap = CountPlacedRustyFridges()
+
+                if wheatOnMap >= LayoutPrepConfig.WheatTarget and fridgeOnMap >= LayoutPrepConfig.FridgeTarget then
+                    -- Layout sudah pernah di-apply sebelumnya -> skip load, langsung harvest
+                    LayoutPrepTriggered = true
+                    AutoHarvestCropEnabled = true
+                    
+                    Log(string.format(
+                        "✅ Restaurant udah punya Wheat %d/%d & Rusty Fridge %d/%d DI MAP -- layout %s kemungkinan udah pernah di-apply, SKIP Layouts_Load, AUTO HARVEST AKTIF",
+                        wheatOnMap, LayoutPrepConfig.WheatTarget, fridgeOnMap, LayoutPrepConfig.FridgeTarget,
+                        LayoutPrepConfig.LayoutCode))
+                else
+                    Log(string.format(
+                        "🎯 Service Level %d + quest Earn $200 selesai -> fase Layout Prep aktif: beli Rusty Fridge %d (inventory), quest-chasing berhenti",
+                        serviceLevel, LayoutPrepConfig.FridgeTarget))
+                end
+            end
+        end
+
+        -- v3.3: Cek inventory (bukan placed count) untuk trigger load layout
+        if LayoutPrepPhaseActive and not LayoutPrepTriggered then
+            local wheatInInventory = GetItemStock(WheatPlantConfig.ItemName)
+            local fridgeInInventory = GetItemStock(LayoutPrepConfig.FridgeItemName)
+
+            if wheatInInventory >= LayoutPrepConfig.WheatTarget and fridgeInInventory >= LayoutPrepConfig.FridgeTarget then
+                LayoutPrepTriggered = true
+
+                Log(string.format(
+                    "✅ Target inventory kepenuhi (Wheat %d/%d, Rusty Fridge %d/%d) -> load layout %s",
+                    wheatInInventory, LayoutPrepConfig.WheatTarget, fridgeInInventory, LayoutPrepConfig.FridgeTarget,
+                    LayoutPrepConfig.LayoutCode))
+
+                local Network = GetNetwork()
+                if Network then
+                    pcall(function()
+                        Network.Invoke("Layouts_Load", LayoutPrepConfig.LayoutCode)
+                        Log("✓ Layout di-load (reconnecting...)")
+                    end)
+                end
+            end
+        end
+        
+        -- v3.2: Auto Harvest Crop aktif kalau layout udah di-apply
+        if LayoutPrepTriggered and AutoHarvestCropEnabled then
+            -- Auto harvest logic akan dijalankan via integrasi dengan auto harvest.lua
+            -- di bawah (lihat section AUTO HARVEST INTEGRATION)
+        end
+    end
+end)
+
+local function ParsePurchaseGoal(goalData)
+    local quantity = goalData.Amount or 1
+    local itemName = nil
+
+    pcall(function()
+        if goalData.GoalData and goalData.GoalData.Goal then
+            local goal = goalData.GoalData.Goal
+            if goal.ItemId then
+                itemName = goal.ItemId
+            elseif goal.Item then
+                itemName = goal.Item
+            elseif goal.Id then
+                itemName = goal.Id
+            end
+        end
+    end)
+
+    local ItemDirectory = GetItemDirectory()
+
+    local function ResolveAgainstDirectory(candidate)
+        if not candidate or not ItemDirectory then
+            return candidate
+        end
+        if ItemDirectory[candidate] then
+            return candidate
+        end
+        local lowerCandidate = candidate:lower()
+        for key, _ in pairs(ItemDirectory) do
+            if key:lower() == lowerCandidate then
+                return key
+            end
+        end
+        return nil
+    end
+
+    if itemName then
+        local resolved = ResolveAgainstDirectory(itemName)
+        if resolved then
+            return resolved, quantity
+        end
+    end
+
+    if goalData.Name and ItemDirectory then
+        local name = goalData.Name
+
+        local patterns = {
+            "[Bb]uy%s+a?n?%s*(.+)!?$",
+            "[Pp]urchase%s+a?n?%s*(.+)!?$",
+            "[Bb]eli%s+(.+)!?$",
+        }
+
+        local extracted = nil
+        for _, pattern in ipairs(patterns) do
+            local match = name:match(pattern)
+            if match then
+                extracted = match:gsub("!$", ""):gsub("^%s+", ""):gsub("%s+$", "")
+                break
+            end
+        end
+
+        if extracted then
+            local resolved = ResolveAgainstDirectory(extracted)
+            if resolved then
+                return resolved, quantity
+            end
+
+            local lowerExtracted = extracted:lower()
+            for key, _ in pairs(ItemDirectory) do
+                local lowerKey = key:lower()
+                if lowerKey:find(lowerExtracted, 1, true) or lowerExtracted:find(lowerKey, 1, true) then
+                    Log(string.format("DEBUG: Fuzzy matched '%s' -> ItemDirectory key '%s'", extracted, key))
+                    return key, quantity
+                end
+            end
+
+            Log(string.format("⚠ Extracted '%s' from quest text but no ItemDirectory match found", extracted))
+        end
+    end
+
+    return itemName, quantity
+end
+
+local function ParsePlaceGoal(goalData)
+    local quantity = goalData.Amount or 1
+    local itemName = nil
+
+    pcall(function()
+        if goalData.GoalData and goalData.GoalData.Goal then
+            local goal = goalData.GoalData.Goal
+            if goal.ItemId then
+                itemName = goal.ItemId
+            elseif goal.Item then
+                itemName = goal.Item
+            elseif goal.Id then
+                itemName = goal.Id
+            end
+        end
+    end)
+
+    local ItemDirectory = GetItemDirectory()
+
+    local function ResolveAgainstDirectory(candidate)
+        if not candidate or not ItemDirectory then
+            return candidate
+        end
+        if ItemDirectory[candidate] then
+            return candidate
+        end
+        local lowerCandidate = candidate:lower()
+        for key, _ in pairs(ItemDirectory) do
+            if key:lower() == lowerCandidate then
+                return key
+            end
+        end
+        return nil
+    end
+
+    if itemName then
+        local resolved = ResolveAgainstDirectory(itemName)
+        if resolved then
+            return resolved, quantity
+        end
+    end
+
+    if goalData.Name and ItemDirectory then
+        local name = goalData.Name
+
+        local patterns = {
+            "[Pp]lace%s+a?n?%s*(.+)!?$",
+            "[Pp]ut%s+a?n?%s*(.+)!?$",
+            "[Ss]et%s+up%s+a?n?%s*(.+)!?$",
+            "[Pp]asang%s+(.+)!?$",
+            "[Ll]etak%a*%s+(.+)!?$",
+            "[Tt]aruh%s+(.+)!?$",
+        }
+
+        local extracted = nil
+        for _, pattern in ipairs(patterns) do
+            local match = name:match(pattern)
+            if match then
+                extracted = match:gsub("!$", ""):gsub("^%s+", ""):gsub("%s+$", "")
+                break
+            end
+        end
+
+        if extracted then
+            local resolved = ResolveAgainstDirectory(extracted)
+            if resolved then
+                return resolved, quantity
+            end
+
+            local lowerExtracted = extracted:lower()
+            for key, _ in pairs(ItemDirectory) do
+                local lowerKey = key:lower()
+                if lowerKey:find(lowerExtracted, 1, true) or lowerExtracted:find(lowerKey, 1, true) then
+                    Log(string.format("DEBUG: Fuzzy matched '%s' -> ItemDirectory key '%s'", extracted, key))
+                    return key, quantity
+                end
+            end
+
+            Log(string.format("⚠ Extracted '%s' from quest text but no ItemDirectory match found", extracted))
+        end
+    end
+
+    return itemName, quantity
+end
+
+local function PlaceItemFromQuest(itemName, quantity)
+    quantity = quantity or 1
+    local placed = 0
+
+    local ok = pcall(function()
+        local ClientRestaurant = GetClientRestaurant()
+        local Network = GetNetwork()
+        local Types = GetEntityTypesModule()
+
+        if not ClientRestaurant or not Network or not Types then
+            Log("⚠ Place: required modules not loaded")
+            return
+        end
+
+        local restaurant = ClientRestaurant.GetLocal()
+        if not restaurant then
+            Log("⚠ Place: restaurant not found")
+            return
+        end
+
+        local stock = GetItemStock(itemName)
+        if stock <= 0 then
+            Log(string.format("⚠ Place: no stock for '%s', beli dulu sebelum bisa diplace", itemName))
+            return
+        end
+
+        local toPlace = math.min(quantity, stock)
+        local floor = GetPlayerFloor(restaurant)
+
+        for i = 1, toPlace do
+            local voxels = GetGenericPlaceableVoxels(restaurant, floor, Types)
+
+            if #voxels == 0 then
+                Log("⚠ Place: no empty placeable tile found on this floor")
+                break
+            end
+
+            local voxel = voxels[1]
+
+            local success = pcall(function()
+                Network.Fire("Build_Place", itemName, voxel.X, voxel.Y, 0, floor)
+            end)
+
+            if not success then
+                Log(string.format("⚠ Place failed: '%s'", itemName))
+                break
+            end
+
+            placed = placed + 1
+            Log(string.format("✓ Placed: %s (%d/%d) @ (%d,%d) floor %d", itemName, placed, toPlace, voxel.X, voxel.Y, floor))
+            task.wait(0.35)
+        end
+    end)
+
+    if not ok then
+        Log("⚠ Error during place attempt for '" .. tostring(itemName) .. "'")
+    end
+
+    return placed > 0
+end
+
+-- ============================================================
+-- AUTO HIRE EMPLOYEE (REAL implementation, v2.1)
+--
+-- IsEmployeeOwned / PurchaseEmployee: cek udah punya belum lewat
+-- EntityUtil.EmployeeSubclasses, cek unlocked lewat
+-- ProgressionUtil.IsEmployeeUnlocked, cek cash cukup lewat
+-- CurrencyCmds.Get("Cash"), baru Network.Invoke("Employee_Purchase",
+-- employeeId). Pattern disamain kayak script Auto Buy Employees user.
+-- ============================================================
+local function IsEmployeeOwned(employeeDir)
+    local EntityUtil = GetEntityUtil()
+
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+
+    if not CachedRestaurant or not EntityUtil or not EntityUtil.EmployeeSubclasses then
+        return false
+    end
+
+    local owned = false
+    pcall(function()
+        for _, subclass in ipairs(EntityUtil.EmployeeSubclasses) do
+            for _, emp in ipairs(CachedRestaurant:CollectSubclass(subclass)) do
+                if emp:GetDirectory() == employeeDir then
+                    owned = true
+                    return
+                end
+            end
+        end
+    end)
+
+    return owned
+end
+
+local function PurchaseEmployee(employeeId, employeeDir)
+    local Network = GetNetwork()
+    local CurrencyCmds = GetCurrencyCmds()
+    local ProgressionUtil = GetProgressionUtil()
+
+    if not Network or not CurrencyCmds or not ProgressionUtil or not employeeDir then
+        Log("⚠ Hire: required modules not loaded")
+        return false
+    end
+
+    if IsEmployeeOwned(employeeDir) then
+        Log(string.format("⚠ Hire: '%s' already owned, skip", employeeId))
+        return false
+    end
+
+    local unlockedOk, unlocked = pcall(function()
+        return ProgressionUtil.IsEmployeeUnlocked(LocalPlayer, employeeId)
+    end)
+    if not unlockedOk or not unlocked then
+        Log(string.format("⚠ Hire: '%s' not unlocked yet", employeeId))
+        return false
+    end
+
+    local price = employeeDir.Price or math.huge
+    local cash = 0
+    pcall(function()
+        cash = CurrencyCmds.Get("Cash") or 0
+    end)
+
+    if cash < price then
+        Log(string.format("⚠ Hire: not enough cash for '%s' (have %d, need %d)", employeeId, cash, price))
+        return false
+    end
+
+    local success = pcall(function()
+        Network.Invoke("Employee_Purchase", employeeId)
+    end)
+
+    if success then
+        Log(string.format("✓ Hired: %s", employeeId))
+    else
+        Log(string.format("⚠ Hire failed: '%s'", employeeId))
+    end
+
+    return success
+end
+
+-- ============================================================
+-- ParseHireGoal (v2.1 REWRITE, berdasarkan decompile ASLI
+-- ReplicatedStorage.Framework.Types.GoalTypes).
+--
+-- Goal untuk quest type 4 (Hire) cuma punya DUA field relevan:
+--   Goal.StaffId    -> id spesifik di Entity directory. LANGSUNG valid
+--                      sebagai key EntityUtil.Employees[StaffId], karena
+--                      Employees dibangun dari Entity directory yang
+--                      difilter subclass (JoinSubclass di EntityUtil),
+--                      jadi key-nya identik dengan Entity._id. Gak perlu
+--                      resolve/fuzzy sama sekali.
+--   Goal.StaffClass -> cuma nama subclass generik ("Waiter","Cook",
+--                      "Farmer","Cleaner","Rancher","Manager","Fisherman",
+--                      "DeliveryDriver"), artinya quest minta hire staff
+--                      DARI KELAS itu, bukan employee tertentu.
+--
+-- Field "EmployeeId" yang dipakai versi lama TIDAK ADA di schema asli --
+-- itu akar masalah kenapa deteksi selalu gagal untuk staff selain
+-- Cleaner. Text-parsing dari goalData.Name juga dihapus total karena
+-- data terstruktur ini jauh lebih reliable.
+-- ============================================================
+local function ParseHireGoal(goalData)
+    local EntityUtil = GetEntityUtil()
+    if not EntityUtil or not EntityUtil.Employees then
+        return nil, nil
+    end
+
+    local goal = goalData.GoalData and goalData.GoalData.Goal
+    if not goal then
+        return nil, nil
+    end
+
+    -- Case 1: StaffId spesifik -> langsung valid sebagai key Employees
+    if goal.StaffId and EntityUtil.Employees[goal.StaffId] then
+        return goal.StaffId, nil
+    end
+
+    -- Case 2: StaffClass generik -> nanti dipilih 1 employee dari kelas
+    -- itu yang belum dimiliki, sudah unlocked, dan cash cukup
+    if goal.StaffClass then
+        return nil, goal.StaffClass
+    end
+
+    return nil, nil
+end
+
+-- Cari 1 employee manapun dari subclass tertentu yang belum dimiliki,
+-- sudah unlocked, dan cash cukup -- dipakai kalau Goal cuma punya
+-- StaffClass (generik) tanpa StaffId spesifik.
+local function FindHireableFromClass(staffClass)
+    local EntityUtil = GetEntityUtil()
+    local ProgressionUtil = GetProgressionUtil()
+    local CurrencyCmds = GetCurrencyCmds()
+
+    if not EntityUtil or not EntityUtil.Employees or not ProgressionUtil or not CurrencyCmds then
+        return nil, nil
+    end
+
+    local cash = 0
+    pcall(function() cash = CurrencyCmds.Get("Cash") or 0 end)
+
+    for employeeId, employeeDir in pairs(EntityUtil.Employees) do
+        if employeeDir.Subclass == staffClass and not IsEmployeeOwned(employeeDir) then
+            local unlockedOk, unlocked = pcall(function()
+                return ProgressionUtil.IsEmployeeUnlocked(LocalPlayer, employeeId)
+            end)
+            if unlockedOk and unlocked then
+                local price = employeeDir.Price or math.huge
+                if cash >= price then
+                    return employeeId, employeeDir
+                end
+            end
+        end
+    end
+
+    return nil, nil
+end
+
+local function HireEmployeeFromQuest(goalData)
+    local EntityUtil = GetEntityUtil()
+    if not EntityUtil or not EntityUtil.Employees then
+        Log("⚠ Hire: EntityUtil module not loaded")
+        return false
+    end
+
+    local employeeId, staffClass = ParseHireGoal(goalData)
+
+    if employeeId then
+        local employeeDir = EntityUtil.Employees[employeeId]
+        if not employeeDir then
+            Log(string.format("⚠ Hire: '%s' not found in EntityUtil.Employees", employeeId))
+            return false
+        end
+        Log(string.format("Target: hire %s (%s) [StaffId]", employeeId, employeeDir.Subclass or "?"))
+        return PurchaseEmployee(employeeId, employeeDir)
+    end
+
+    if staffClass then
+        local candidateId, candidateDir = FindHireableFromClass(staffClass)
+        if not candidateId then
+            Log(string.format("⚠ Hire: no hireable '%s' found (owned/locked/cash?)", staffClass))
+            return false
+        end
+        Log(string.format("Target: hire %s (%s) [StaffClass]", candidateId, staffClass))
+        return PurchaseEmployee(candidateId, candidateDir)
+    end
+
+    Log("⚠ Hire: could not identify employee to hire from quest (no StaffId/StaffClass)")
+    return false
+end
+
+-- Step 1: Auto Complete Quests Until Level 10
+local function AutoCompleteQuests()
+    -- v3.1: begitu fase Layout Prep aktif (Service Level 10 + quest Earn
+    -- $200 selesai), berhenti total ngejar quest. Base restaurant loop
+    -- TETAP jalan (di-enable-nya udah dari panggilan AutoCompleteQuests
+    -- sebelumnya & gak pernah dimatiin lagi), cuma logic quest-nya yang
+    -- di-skip di sini.
+    if QuestAutomationStopped then
+        return
+    end
+
+    UpdateStatus("Step 1: Auto Completing Quests (Target: Level 10)", Color3.fromRGB(255, 255, 100))
+    Log("Starting quest automation...")
+
+    -- ============================================================
+    -- v2.2: Sit + TakeOrder + Cooking + Serve + Dish sekarang di-enable
+    -- SEKALI di sini dan JALAN TERUS selama Step 1 (sampai Service Level
+    -- 10 tercapai), berapapun quest type yang lagi difokuskan oleh
+    -- priority system. Dulu keempatnya cuma nyala kalau quest yang lagi
+    -- fokus butuh (misal type 1/8/10/5), jadi restoran idle pas quest
+    -- fokus lagi Purchase/Hire/Place/Earn -- padahal customer baru tetap
+    -- perlu dilayani biar quest lain gak numpuk dan restoran gak macet.
+    -- Serve ikut dinyalakan (bukan cuma sit/order/cook/dish yang diminta)
+    -- karena tanpa Serve, makanan yang udah dimasak gak pernah diantar --
+    -- loop-nya bakal buntu di tengah.
+    -- ============================================================
+    AutoSitEnabled = true
+    AutoTakeOrderEnabled = true
+    AutoCookingEnabled = true
+    AutoServeEnabled = true
+    AutoDishwasherEnabled = true
+    Log("→ Base restaurant loop (Sit+Order+Cook+Serve+Dish) enabled for entire Step 1")
+
+    local Saving = GetSaving()
+    local GoalCmds = GetGoalCmds()
+    local QuestCmds = GetQuestCmds()
+
+    if Saving then
+        Log("✓ Saving module loaded")
+        local saveData = Saving.Get()
+        if saveData then
+            Log("✓ Save data available")
+            if saveData.Goals then
+                local count = 0
+                for _ in pairs(saveData.Goals) do count = count + 1 end
+                Log(string.format("✓ Goals table found (%d entries)", count))
+            else
+                Log("⚠ No Goals table in save data")
+            end
+        else
+            Log("⚠ Save data is nil")
+        end
+    else
+        Log("❌ Saving module not found")
+    end
+
+    if GoalCmds then
+        Log("✓ GoalCmds module loaded")
+    else
+        Log("⚠ GoalCmds module not found")
+    end
+
+    if QuestCmds then
+        Log("✓ QuestCmds module loaded")
+    else
+        Log("⚠ QuestCmds module not found")
+    end
+
+    Log("Detecting active quests...")
+
+    while Running and GetServiceLevel() < Config.TargetLevel do
+        local currentLevel = GetServiceLevel()
+        Log("Current Service Level: " .. currentLevel .. "/" .. Config.TargetLevel)
+
+        local activeGoals = GetActiveGoals()
+
+        if next(activeGoals) then
+            local questCount = 0
+            for _ in pairs(activeGoals) do
+                questCount = questCount + 1
+            end
+            Log(string.format("Found %d active quest(s)", questCount))
+
+            -- ============================================================
+            -- PRIORITY SYSTEM: Focus on ONE quest at a time.
+            -- Seleksi dilakukan lewat SelectFocusQuest() -- fungsi yang SAMA
+            -- dipakai monitor loop di bawah, jadi GUI dan action selalu
+            -- nunjuk ke quest yang identik (fix flicker v1.7).
+            -- ============================================================
+            local currentQuest = SelectFocusQuest(activeGoals)
+            local claimedAnyQuest = false
+
+            if currentQuest then
+                if currentQuest.Completed then
+                    Log(string.format("🎯 Priority: Claiming completed quest '%s'", currentQuest.Name))
+                else
+                    Log(string.format("🎯 Priority: Focusing on Type %d quest '%s'", currentQuest.Type or -1, currentQuest.Name))
+                end
+            end
+
+            if currentQuest then
+                local goalData = currentQuest
+
+                if not goalData.Completed then
+                    Log(string.format("Quest: %s [%d/%d]", goalData.Name, goalData.Progress, goalData.Amount))
+                    Log(string.format("Type: %d | Tag: %s", goalData.Type or 0, goalData.Tag1 or "None"))
+                    UpdateQuestDisplay(goalData.Name, goalData.Progress, goalData.Amount)
+
+                    local questType = goalData.Type
+                    local success = false
+
+                    -- Goal Type Reference (from GoalTypes decompile):
+                    -- 1 = Customer (Serve)   2 = Purchase   3 = Earn
+                    -- 4 = Hire   5 = Dish (Clean)   7 = Harvest
+                    -- 8 = ServeRecipe   10 = Cook   12 = Place
+
+                    if questType == 1 or questType == 8 then
+                        -- Base loop (Sit/Order/Cook/Serve/Dish) sudah always-on
+                        -- dari awal Step 1, quest ini otomatis progress sambil
+                        -- restoran jalan seperti biasa.
+                        Log("→ Serve quest in progress (base loop already running)...")
+                        success = true
+
+                    elseif questType == 10 then
+                        -- Cooking sudah always-on, tinggal nunggu progress
+                        Log("→ Cook quest in progress (base loop already running)...")
+                        success = true
+
+                    elseif questType == 3 then
+                        Log("→ Enabling auto-claim earnings (cash register/tip jar/ice cream)...")
+                        AutoClaimEarningsEnabled = true
+                        success = true
+
+                    elseif questType == 4 then
+                        -- Hire quest (v2.1 FIX) - Goal.StaffId / Goal.StaffClass
+                        -- dibaca langsung dari struktur asli, bukan tebak dari teks.
+                        Log("→ Hiring employee from quest...")
+
+                        success = HireEmployeeFromQuest(goalData)
+
+                        if success then
+                            Log("✓ Hire completed")
+                            task.wait(1)
+                        else
+                            Log("⚠ Hire failed, will retry...")
+                            task.wait(2)
+                        end
+
+                    elseif questType == 12 then
+                        Log("→ Placing item from quest...")
+
+                        local itemName, quantity = ParsePlaceGoal(goalData)
+                        if itemName then
+                            Log(string.format("Target: %s x%d", itemName, quantity))
+                            success = PlaceItemFromQuest(itemName, quantity)
+
+                            if success then
+                                Log("✓ Place completed")
+                                task.wait(1)
+                            else
+                                Log("⚠ Place failed, will retry...")
+                                task.wait(2)
+                            end
+                        else
+                            Log("⚠ Could not identify item to place")
+                        end
+
+                    elseif questType == 5 then
+                        -- Dishwasher sudah always-on, tinggal nunggu progress
+                        Log("→ Dish quest in progress (base loop already running)...")
+                        success = true
+
+                    elseif questType == 7 then
+                        Log("→ Harvesting crops...")
+                        -- TODO: Add harvest logic
+
+                    elseif questType == 2 then
+                        Log("→ Purchasing item from shop...")
+
+                        local itemName, quantity = ParsePurchaseGoal(goalData)
+                        if itemName then
+                            Log(string.format("Target: %s x%d", itemName, quantity))
+                            success = PurchaseItemFromShop(itemName, quantity)
+
+                            if success then
+                                Log("✓ Purchase completed")
+                                task.wait(1)
+                            else
+                                Log("⚠ Purchase failed, will retry...")
+                                task.wait(2)
+                            end
+                        else
+                            Log("⚠ Could not identify item to purchase")
+                        end
+
+                    else
+                        -- Base loop sudah always-on, cukup log & tetap progress
+                        Log(string.format("→ Unknown type %d, base loop already running...", questType or 0))
+                        success = true
+                    end
+
+                    if success then
+                        Log("✓ Action executed")
+                    end
+
+                    task.wait(0.5)
+                else
+                    Log(string.format("✓ Quest completed! Claiming: %s", goalData.Name))
+
+                    local cacheKey = "QUEST_" .. goalData.GoalId
+                    local lastClaimed = ClaimedQuestCache[cacheKey] or 0
+
+                    if tick() - lastClaimed > 5 then
+                        ClaimedQuestCache[cacheKey] = tick()
+
+                        pcall(function()
+                            local QuestCmds = GetQuestCmds()
+                            local QuestDirectory = GetQuestDirectory()
+
+                            if QuestCmds and QuestDirectory then
+                                if goalData.GoalData and goalData.GoalData.Tag2 then
+                                    local questData = QuestDirectory[goalData.GoalData.Tag2]
+
+                                    if questData then
+                                        QuestCmds.ClaimReward(questData, goalData.GoalId)
+                                        Log("✓ Claimed quest reward (GUI safe)")
+                                        claimedAnyQuest = true
+                                        task.wait(1)
+                                    else
+                                        Log("⚠ Quest data not found in directory")
+                                    end
+                                else
+                                    Log("⚠ Quest Tag2 not found, trying Goals_Claim fallback")
+                                    if CachedNetwork then
+                                        CachedNetwork.Invoke("Goals_Claim", goalData.GoalId)
+                                        Log("✓ Claimed goal reward")
+                                        claimedAnyQuest = true
+                                        task.wait(2)
+                                    end
+                                end
+                            else
+                                Log("⚠ QuestCmds or Quest directory not loaded")
+                            end
+                        end)
+
+                        -- v3.1: deteksi quest "Earn $200 Cash" (quest #11)
+                        -- kekelar SESI INI -- dipakai bareng skill Service
+                        -- Level 10 buat trigger fase Layout Prep.
+                        if claimedAnyQuest and goalData.Type == 3 and goalData.Amount == 200 then
+                            Earn200QuestDone = true
+                            Log("🏁 Quest Earn $200 (quest #11) berhasil diklaim!")
+                        end
+                    else
+                        Log("⚠ Quest recently claimed, skipping (anti-spam)")
+                    end
+                end
+            else
+                Log("⚠ No quest selected (should not happen)")
+            end
+
+            if claimedAnyQuest then
+                Log("Re-scanning for new quests...")
+                task.wait(0.5)
+                continue
+            end
+        else
+            -- Base loop sudah always-on sejak awal Step 1, gak perlu di-set lagi
+            Log("No active quests detected, base restaurant loop still running...")
+        end
+
+        task.wait(Config.CheckInterval)
+    end
+
+    if GetServiceLevel() >= Config.TargetLevel then
+        Log("Reached Service Level " .. Config.TargetLevel .. "!")
+
+        pcall(function()
+            local Network = require(ReplicatedStorage.Framework.Client.Network)
+            Network.Invoke("Plot_Buy")
+            Log("Plot purchased")
+            task.wait(1)
+        end)
+
+        pcall(function()
+            local Network = require(ReplicatedStorage.Framework.Client.Network)
+            Network.Invoke("Farming_BuyWheat", "Unlimited")
+            Log("Unlimited wheat purchased")
+        end)
+
+        CurrentStep = 2
+    end
+end
+
+-- Step 2: Import Layout Code
+local function ImportLayout()
+    if Config.LayoutCode == "" or Config.LayoutCode == "Paste Layout Code Here..." then
+        UpdateStatus("Step 2: Waiting for Layout Code", Color3.fromRGB(255, 255, 100))
+        Log("Please paste your layout code and click Start again")
+        Running = false
+        return false
+    end
+
+    UpdateStatus("Step 2: Importing Layout", Color3.fromRGB(255, 255, 100))
+    Log("Importing layout code...")
+
+    pcall(function()
+        local success, err = pcall(function()
+            loadstring(Config.LayoutCode)()
+        end)
+
+        if success then
+            Log("Layout code imported successfully")
+            CurrentStep = 3
+        else
+            Log("Error importing layout: " .. tostring(err))
+            return false
+        end
+    end)
+
+    return true
+end
+
+-- Step 3: Check Wheat and Apply Layout
+local function CheckWheatAndApplyLayout()
+    UpdateStatus("Step 3: Checking Wheat Status", Color3.fromRGB(255, 255, 100))
+    Log("Checking if wheat is ready...")
+
+    local wheatReady = false
+    while Running and not wheatReady do
+        pcall(function()
+            local playerData = LocalPlayer:FindFirstChild("PlayerData")
+            if playerData then
+                local wheat = playerData:FindFirstChild("Wheat")
+                if wheat and wheat.Value > 0 then
+                    wheatReady = true
+                end
+            end
+        end)
+
+        if not wheatReady then
+            Log("Wheat not ready yet, waiting...")
+            task.wait(5)
+        end
+    end
+
+    if wheatReady then
+        Log("Wheat is ready! Applying layout...")
+
+        pcall(function()
+            local applyLayoutEvent = ReplicatedStorage:FindFirstChild("ApplyLayout") or
+                                    ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild("ApplyLayout")
+            if applyLayoutEvent then
+                applyLayoutEvent:FireServer(Config.LayoutCode)
+                Log("Layout applied successfully")
+            end
+        end)
+
+        if Config.AutoRejoinOnLayoutChange then
+            Log("Rejoining game in 3 seconds...")
+            task.wait(3)
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end
+
+        CurrentStep = 4
+    end
+end
+
+-- Step 4: Auto Harvest and Sell
+local function AutoHarvestAndSell()
+    UpdateStatus("Step 4: Auto Harvesting & Selling", Color3.fromRGB(100, 255, 100))
+    Log("Starting auto harvest and sell loop...")
+
+    while Running do
+        pcall(function()
+            local harvestEvent = ReplicatedStorage:FindFirstChild("Harvest") or
+                                ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild("Harvest")
+            if harvestEvent then
+                harvestEvent:FireServer()
+            end
+
+            task.wait(0.5)
+            local sellEvent = ReplicatedStorage:FindFirstChild("Sell") or
+                             ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild("Sell")
+            if sellEvent then
+                sellEvent:FireServer()
+            end
+
+            local playerData = LocalPlayer:FindFirstChild("PlayerData")
+            if playerData then
+                local inventory = playerData:FindFirstChild("Inventory")
+                if inventory then
+                    local totalItems = 0
+                    for _, item in pairs(inventory:GetChildren()) do
+                        if item:IsA("IntValue") or item:IsA("NumberValue") then
+                            totalItems = totalItems + item.Value
+                        end
+                    end
+
+                    if totalItems == 0 then
+                        Log("All ingredients sold (Inventory: 0)")
+                    else
+                        Log("Inventory: " .. totalItems .. " items")
+                    end
+                end
+            end
+        end)
+
+        task.wait(1)
+    end
+end
+
+-- Main Loop
+local function MainLoop()
+    while Running do
+        if CurrentStep == 1 then
+            if GetServiceLevel() >= Config.TargetLevel then
+                Log("Service Level already " .. GetServiceLevel() .. ", skipping Step 1")
+                CurrentStep = 2
+            else
+                AutoCompleteQuests()
+            end
+        elseif CurrentStep == 2 then
+            if not ImportLayout() then
+                break
+            end
+        elseif CurrentStep == 3 then
+            CheckWheatAndApplyLayout()
+        elseif CurrentStep == 4 then
+            AutoHarvestAndSell()
+        end
+
+        task.wait(Config.CheckInterval)
+    end
+end
+
+-- Button Events
+StartButton.MouseButton1Click:Connect(function()
+    if not Running then
+        Running = true
+        Config.LayoutCode = LayoutInput.Text
+
+        -- v3.1: reset flag Layout Prep Phase tiap Start, jaga-jaga restart
+        LayoutPrepPhaseActive = false
+        Earn200QuestDone = false
+        QuestAutomationStopped = false
+        LayoutPrepTriggered = false
+
+        Log("===========================================")
+        Log("Kaitun RAR v3.7 Started")
+        Log("===========================================")
+
+        if not InitializeModules() then
+            Log("❌ Failed to initialize game modules!")
+            Log("Make sure you're in your restaurant!")
+            Running = false
+            UpdateStatus("Initialization Failed", Color3.fromRGB(255, 0, 0))
+            return
+        end
+
+        local serviceLevel = GetServiceLevel()
+        if serviceLevel >= Config.TargetLevel then
+            local layoutApplied = false
+            pcall(function()
+                local playerData = LocalPlayer:FindFirstChild("PlayerData")
+                if playerData and playerData:FindFirstChild("LayoutApplied") then
+                    layoutApplied = playerData.LayoutApplied.Value
+                end
+            end)
+
+            if layoutApplied or Config.LayoutCode ~= "" and Config.LayoutCode ~= "Paste Layout Code Here..." then
+                CurrentStep = 4
+                Log("✓ Layout detected, jumping to Step 4")
+            else
+                CurrentStep = 2
+                Log("✓ Level 10+ reached, starting from Step 2")
+            end
+        else
+            CurrentStep = 1
+            Log("✓ Starting from Step 1 (Quest completion)")
+        end
+
+        -- v2.4: Auto Place Table & Chair jalan independen dari Step,
+        -- target restoran total 6 set, aktif sepanjang script Running.
+        -- (v2.8: otomatis berhenti sendiri kalau skill Farming unlocked)
+        AutoPlaceFurnitureEnabled = true
+        RunFurnitureWatcher()
+        Log("✓ Auto Place Table & Chair enabled (target: " .. FurnitureConfig.TargetSets .. " set)")
+
+        -- v2.8: Auto Place Wheat Plant, independen dari Step, tapi cuma
+        -- aktif ngerjain sesuatu begitu skill Farming ke-unlock (dicek
+        -- di dalam TryAutoPlaceWheat tiap tick).
+        -- v3.2: DIHAPUS - diganti auto-BUY Wheat (gak di-place)
+        -- AutoPlaceWheatEnabled = true
+        -- RunWheatWatcher()
+        -- Log("✓ Auto Place Wheat Plant enabled (aktif begitu skill Farming unlocked)")
+
+        -- v2.7: Auto Buy Plots, independen dari Step -- jalan terus di
+        -- background begitu status package Purchasable & cash cukup.
+        AutoBuyPlotsEnabled = true
+        Log("✓ Auto Buy Plots enabled" .. (#Config.AutoBuyPlotIds > 0
+            and string.format(" (dibatasin %d id)", #Config.AutoBuyPlotIds)
+            or " (semua package Purchasable)"))
+
+        -- v2.5: Auto Buy Shop, cuma aktif kalau Config.ShopBuyItems atau
+        -- Config.ShopBuyCategories diisi manual sebelum Start ditekan.
+        if #Config.ShopBuyItems > 0 or #Config.ShopBuyCategories > 0 then
+            AutoBuyShopEnabled = true
+            Log(string.format("✓ Auto Buy Shop enabled (%d item, %d kategori)",
+                #Config.ShopBuyItems, #Config.ShopBuyCategories))
+        end
+
+        task.spawn(MainLoop)
+    end
+end)
+
+StopButton.MouseButton1Click:Connect(function()
+    Running = false
+
+    AutoSitEnabled = false
+    AutoTakeOrderEnabled = false
+    AutoCookingEnabled = false
+    AutoServeEnabled = false
+    AutoDishwasherEnabled = false
+    AutoClaimEarningsEnabled = false
+    AutoPlaceFurnitureEnabled = false
+    AutoBuyWheatEnabled = false
+    AutoBuyFridgeEnabled = false
+    AutoBuyShopEnabled = false
+    AutoBuyPlotsEnabled = false
+    AutoHarvestCropEnabled = false
+
+    UpdateStatus("Stopped", Color3.fromRGB(170, 0, 0))
+    Log("Kaitun stopped")
+    Log("All automation disabled")
+end)
+
+-- ============================================================
+-- AUTO HARVEST CROP INTEGRATION (v3.2)
+--
+-- Integrasi dengan auto harvest.lua. Harvest crop aktif kalau:
+-- - Service skill sudah level 10
+-- - Quest "Earn $200" sudah selesai (gak ada lagi di active goals)
+-- - Layout sudah di-apply (LayoutPrepTriggered == true)
+-- ============================================================
+local HarvestLoopRunning = false
+local HarvestCooldownUntil = 0
+local HarvestInterval = 15
+local HarvestRadius = 12
+
+local function IsCropReadyByStage(Crop)
+    local ClientCrop = nil
+    pcall(function()
+        ClientCrop = require(ReplicatedStorage.Framework.Client.ClientEntity.ClientCrop)
+    end)
+    
+    if not ClientCrop then
+        return false
+    end
+    
+    local Stage = Crop:GetSession("Stage") or 1
+    local StageCount = ClientCrop.GetStageCount(Crop) or 1
+    return StageCount <= Stage
+end
+
+local function GetReadyCropsWithPos(Restaurant)
+    local List = {}
+    for _, Crop in ipairs(Restaurant:CollectSubclass("Crop")) do
+        if not Crop:IsLocal() then
+            continue
+        end
+        if not IsCropReadyByStage(Crop) then
+            continue
+        end
+        local Model = Crop:GetModel()
+        if not Model then
+            continue
+        end
+        local CropName = Model.Name:gsub(" Crop_.+", "")
+        -- Harvest semua crop Wheat yang ready
+        if CropName == LayoutPrepConfig.WheatCropFamilyName then
+            table.insert(List, { Crop = Crop, Pos = Model:GetPivot().Position })
+        end
+    end
+    return List
+end
+
+local function InvokeHarvest(Crop)
+    local ok, result = pcall(function()
+        return Crop:Invoke("CropHarvest")
+    end)
+    return ok and result ~= false
+end
+
+local function HarvestDoWork()
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    
+    if not CachedRestaurant then
+        return
+    end
+
+    local ReadyCrops = GetReadyCropsWithPos(CachedRestaurant)
+    if #ReadyCrops == 0 then
+        HarvestCooldownUntil = tick() + HarvestInterval
+        return
+    end
+
+    local HRP = GetRootPart()
+    if not HRP then
+        return
+    end
+    
+    local RefPos = HRP.Position
+    local Nearest, NearestDist = nil, math.huge
+    
+    for _, Entry in ipairs(ReadyCrops) do
+        local Dist = (Entry.Pos - RefPos).Magnitude
+        if Dist < NearestDist then
+            NearestDist = Dist
+            Nearest = Entry
+        end
+    end
+
+    if not Nearest then
+        return
+    end
+
+    -- v3.6: Simple TP dari global.lua (WORKING)
+    HRP.CFrame = CFrame.new(Nearest.Pos + Vector3.new(0, 3, 0))
+    task.wait(0.1)
+
+    -- Harvest semua crop dalam radius
+    local harvested = 0
+    for _, Entry in ipairs(ReadyCrops) do
+        local Dist = (Entry.Pos - Nearest.Pos).Magnitude
+        if Dist <= HarvestRadius then
+            task.spawn(function()
+                if InvokeHarvest(Entry.Crop) then
+                    harvested = harvested + 1
+                end
+            end)
+        end
+    end
+
+    task.wait(0.2)
+
+    if harvested > 0 then
+        Log(string.format("🌾 Harvested %d crops", harvested))
+    end
+
+    if #GetReadyCropsWithPos(CachedRestaurant) == 0 then
+        HarvestCooldownUntil = tick() + HarvestInterval
+    end
+end
+
+local function HarvestIsReady()
+    if tick() < HarvestCooldownUntil then
+        return false
+    end
+    
+    if not CachedRestaurant then
+        CachedRestaurant = CachedClientRestaurant and CachedClientRestaurant.GetLocal()
+    end
+    
+    if not CachedRestaurant then
+        return false
+    end
+    
+    local ReadyCrops = GetReadyCropsWithPos(CachedRestaurant)
+    return #ReadyCrops > 0
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+
+        if not AutoHarvestCropEnabled or not Running then
+            continue
+        end
+
+        local ok, ready = pcall(HarvestIsReady)
+        if not ok or not ready then
+            continue
+        end
+
+        local doOk, err = pcall(function()
+            HarvestDoWork()
+        end)
+        
+        if not doOk then
+            warn("[AutoHarvest] error: " .. tostring(err))
+        end
+    end
+end)
+
+-- Initialize
+Log("Script loaded successfully!")
+Log("Instructions:")
+Log("1. Paste your layout code in the textbox")
+Log("2. Click 'Start Kaitun' to begin")
+Log("3. Script will automatically detect your progress")
+UpdateStatus("Ready", Color3.fromRGB(100, 255, 100))
+
+-- Monitor and update quest display in real-time
+-- v1.7: sekarang pakai SelectFocusQuest() -- fungsi seleksi SAMA yang
+-- dipakai AutoCompleteQuests() -- bukan ambil quest pertama dari pairs()
+-- secara arbitrary. Ini yang bikin GUI dulu flicker: loop ini bisa nunjuk
+-- quest A sementara AutoCompleteQuests() lagi kerjain quest B.
+task.spawn(function()
+    task.wait(2)
+
+    while true do
+        task.wait(3)
+
+        if not Running then
+            continue
+        end
+
+        pcall(function()
+            local activeGoals = GetActiveGoals()
+            local focusQuest = SelectFocusQuest(activeGoals)
+
+            if focusQuest then
+                CurrentActiveQuest = string.format("%s [%d/%d]", focusQuest.Name, focusQuest.Progress, focusQuest.Amount)
+                UpdateQuestDisplay(focusQuest.Name, focusQuest.Progress, focusQuest.Amount)
+            else
+                CurrentActiveQuest = "None"
+                UpdateQuestDisplay(nil)
+            end
+        end)
+    end
+end)
