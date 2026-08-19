@@ -1,6 +1,26 @@
 --[[
-    Run a Restaurant - Kaitun Script v3.7
+    Run a Restaurant - Kaitun Script v3.8
     One-Tap Tutorial Automation
+
+    CHANGELOG v3.8:
+    - NEW: Auto Enable Recipe (Independen) - auto-enable SEMUA recipe (lama/baru unlock)
+    - HANYA kirim remote kalau ADA recipe yang disabled (anti spam)
+    - Two-pass check: cek dulu ada disabled gak → kalau ada baru enable
+    - Kalau semua recipe enabled/locked → IDLE, gak kirim apa-apa
+    - Hook ke RecipeCmds.Discovered event:
+      * Cek CUMA recipe yang baru unlock
+      * Kalau disabled → enable + log "New recipe unlocked & enabled"
+      * Kalau udah enabled → idle + log "already enabled"
+    - Loop check interval 10 detik (gak perlu cepet karena event-driven)
+    - Pattern: GetRecipeModule() -> filter DisableToggle -> RecipeCmds.IsDisabled() ->
+      ToggleEnabled() kalau perlu. Delay 0.05s antar toggle biar gak spam network.
+    - NEW: Stats Info Panel - tampilan lengkap real-time stats di GUI:
+      * 💰 Cash (dengan comma separator)
+      * 📈 CPM (Cash Per Minute - calculated from 5 min history)
+      * 🌾 Wheat Crop count (di map)
+      * 🧊 Rusty Fridge count (di map)
+      * ⏱️ Runtime (HH:MM:SS format)
+      * 🎯 Current Goal (dynamic berdasarkan fase automation)
 
     CHANGELOG v3.7:
     - NEW: Filter Milestone Quest - script sekarang bisa bedain quest utama vs milestone
@@ -9,6 +29,9 @@
     - Milestone quest unlock saat Service Level 10 tapi TIDAK dikerjakan automation
     - Hanya quest utama (tutorial progression) yang dikerjakan automation
     - Log improved: "DEBUG: Skipped MILESTONE quest" untuk visibility
+    - NEW: Quest automation TETAP JALAN sambil nunggu Wheat Plant 168 di inventory
+    - QuestAutomationStopped cuma aktif SETELAH target inventory tercapai (168 Wheat + 2 Fridge)
+    - Flow: Farming unlock → Auto Buy Wheat (background) → Quest tetap jalan → Target inventory → STOP quest → Load layout
 
     CHANGELOG v3.6:
     - COMPLETE REWRITE TP system - based on global.lua yang WORKING
@@ -310,10 +333,12 @@
       udah Level 10 tapi quest itu gak ketemu lagi di GetActiveGoals(),
       anggap udah pernah selesai di sesi sebelumnya (penting buat kasus
       relog).
-    - CHANGE: begitu fase aktif, AutoCompleteQuests() BERHENTI TOTAL
-      ngejar quest (early-return di awal fungsi, guard QuestAutomationStopped)
-      -- tapi Sit/TakeOrder/Cooking/Serve/Dishwasher TETAP JALAN (gak
-      disentuh sama sekali, beda dari v2.9 lama).
+    - CHANGE v3.7: Quest automation TETAP JALAN sambil nunggu Wheat Plant 168!
+      AutoCompleteQuests() tetap aktif begitu LayoutPrepPhaseActive = true.
+      QuestAutomationStopped HANYA di-set true SETELAH inventory target tercapai
+      (168 Wheat + 2 Fridge), baru kemudian load layout.
+      Flow: Farming unlock → Auto Buy Wheat (background) → Quest jalan terus →
+      Target inventory → STOP quest → Load layout.
     - CHANGE: AutoClaimEarningsEnabled dipaksa true terus begitu fase
       aktif (modal buat beli Wheat Plant & Rusty Fridge).
     - CHANGE: Auto Place Wheat Plant (v2.8) gate-nya diganti dari
@@ -382,8 +407,8 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 400, 0, 590)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -295)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -429,9 +454,34 @@ QuestLabel.Font = Enum.Font.Gotham
 QuestLabel.TextXAlignment = Enum.TextXAlignment.Left
 QuestLabel.Parent = MainFrame
 
+-- v3.8: Stats Info - Wheat, Fridge, Cash, CPM, Runtime, Goal
+local StatsLabel = Instance.new("TextLabel")
+StatsLabel.Size = UDim2.new(1, -20, 0, 80)
+StatsLabel.Position = UDim2.new(0, 10, 0, 120)
+StatsLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+StatsLabel.BorderSizePixel = 0
+StatsLabel.Text = "Stats Loading..."
+StatsLabel.TextColor3 = Color3.fromRGB(150, 220, 255)
+StatsLabel.TextSize = 11
+StatsLabel.Font = Enum.Font.Code
+StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatsLabel.TextYAlignment = Enum.TextYAlignment.Top
+StatsLabel.Parent = MainFrame
+
+local StatsLabelPadding = Instance.new("UIPadding")
+StatsLabelPadding.PaddingLeft = UDim.new(0, 8)
+StatsLabelPadding.PaddingTop = UDim.new(0, 5)
+StatsLabelPadding.PaddingRight = UDim.new(0, 8)
+StatsLabelPadding.PaddingBottom = UDim.new(0, 5)
+StatsLabelPadding.Parent = StatsLabel
+
+local StatsLabelCorner = Instance.new("UICorner")
+StatsLabelCorner.CornerRadius = UDim.new(0, 5)
+StatsLabelCorner.Parent = StatsLabel
+
 local LayoutInput = Instance.new("TextBox")
 LayoutInput.Size = UDim2.new(1, -20, 0, 100)
-LayoutInput.Position = UDim2.new(0, 10, 0, 130)
+LayoutInput.Position = UDim2.new(0, 10, 0, 210)
 LayoutInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 LayoutInput.Text = "Paste Layout Code Here..."
 LayoutInput.TextColor3 = Color3.new(1, 1, 1)
@@ -448,7 +498,7 @@ LayoutInputCorner.Parent = LayoutInput
 
 local StartButton = Instance.new("TextButton")
 StartButton.Size = UDim2.new(1, -20, 0, 40)
-StartButton.Position = UDim2.new(0, 10, 0, 240)
+StartButton.Position = UDim2.new(0, 10, 0, 320)
 StartButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
 StartButton.Text = "Start Kaitun"
 StartButton.TextColor3 = Color3.new(1, 1, 1)
@@ -462,7 +512,7 @@ StartButtonCorner.Parent = StartButton
 
 local StopButton = Instance.new("TextButton")
 StopButton.Size = UDim2.new(1, -20, 0, 40)
-StopButton.Position = UDim2.new(0, 10, 0, 290)
+StopButton.Position = UDim2.new(0, 10, 0, 370)
 StopButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
 StopButton.Text = "Stop"
 StopButton.TextColor3 = Color3.new(1, 1, 1)
@@ -476,7 +526,7 @@ StopButtonCorner.Parent = StopButton
 
 local LogFrame = Instance.new("ScrollingFrame")
 LogFrame.Size = UDim2.new(1, -20, 0, 160)
-LogFrame.Position = UDim2.new(0, 10, 0, 340)
+LogFrame.Position = UDim2.new(0, 10, 0, 420)
 LogFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 LogFrame.BorderSizePixel = 0
 LogFrame.ScrollBarThickness = 6
@@ -501,6 +551,12 @@ local CachedNetwork = nil
 local CachedItemDirectory = nil
 local CurrentActiveQuest = "None"
 local ClaimedQuestCache = {}
+
+-- v3.8: Stats tracking
+local ScriptStartTime = 0
+local LastCashAmount = 0
+local CashHistory = {} -- {timestamp, amount} pairs untuk CPM calculation
+local CurrentGoalText = "Initializing..."
 
 -- ============================================================
 -- Utility Functions
@@ -537,6 +593,127 @@ local function UpdateQuestDisplay(questName, progress, amount)
     else
         QuestLabel.Text = "Active Quest: None"
     end
+end
+
+-- v3.8: Format runtime (seconds -> HH:MM:SS)
+local function FormatRuntime(seconds)
+    local hours = math.floor(seconds / 3600)
+    local mins = math.floor((seconds % 3600) / 60)
+    local secs = math.floor(seconds % 60)
+    return string.format("%02d:%02d:%02d", hours, mins, secs)
+end
+
+-- v3.8: Format number with comma separators
+local function FormatNumber(num)
+    local formatted = tostring(num)
+    local k
+    while true do
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+        if k == 0 then
+            break
+        end
+    end
+    return formatted
+end
+
+-- v3.8: Calculate CPM (Cash Per Minute) from history
+local function CalculateCPM()
+    if #CashHistory < 2 then
+        return 0
+    end
+    
+    -- Ambil data 5 menit terakhir (atau semua kalau belum 5 menit)
+    local now = tick()
+    local validHistory = {}
+    
+    for i = #CashHistory, 1, -1 do
+        local entry = CashHistory[i]
+        if now - entry.timestamp <= 300 then -- 5 minutes
+            table.insert(validHistory, 1, entry)
+        end
+    end
+    
+    if #validHistory < 2 then
+        return 0
+    end
+    
+    local firstEntry = validHistory[1]
+    local lastEntry = validHistory[#validHistory]
+    
+    local cashDiff = lastEntry.amount - firstEntry.amount
+    local timeDiff = lastEntry.timestamp - firstEntry.timestamp
+    
+    if timeDiff <= 0 then
+        return 0
+    end
+    
+    return math.floor((cashDiff / timeDiff) * 60)
+end
+
+-- v3.8: Update stats display
+local function UpdateStatsLabel()
+    if not Running then
+        StatsLabel.Text = "Stats: Not running"
+        return
+    end
+    
+    local runtime = FormatRuntime(tick() - ScriptStartTime)
+    
+    -- Get current cash
+    local currentCash = 0
+    pcall(function()
+        local CurrencyCmds = require(ReplicatedStorage.Framework.Client.CurrencyCmds)
+        currentCash = CurrencyCmds.Get("Cash") or 0
+    end)
+    
+    -- Update cash history for CPM
+    if currentCash ~= LastCashAmount then
+        table.insert(CashHistory, {timestamp = tick(), amount = currentCash})
+        LastCashAmount = currentCash
+        
+        -- Keep only last 20 entries
+        while #CashHistory > 20 do
+            table.remove(CashHistory, 1)
+        end
+    end
+    
+    local cpm = CalculateCPM()
+    
+    -- Get wheat crop count
+    local wheatCount = 0
+    pcall(function()
+        local Restaurant = GetRestaurant()
+        if Restaurant then
+            local crops = Restaurant.Interiors.Crops:GetChildren()
+            for _, cropModel in pairs(crops) do
+                if cropModel:IsA("Model") then
+                    local cropName = cropModel.Name:match("^(.+)%s+Crop_%d+$")
+                    if cropName == "Wheat Plant" then
+                        wheatCount = wheatCount + 1
+                    end
+                end
+            end
+        end
+    end)
+    
+    -- Get fridge count
+    local fridgeCount = 0
+    pcall(function()
+        fridgeCount = GetPlacedFurnitureCount("Rusty Fridge")
+    end)
+    
+    StatsLabel.Text = string.format(
+        "💰 Cash: $%s | 📈 CPM: $%s\n" ..
+        "🌾 Wheat: %d | 🧊 Fridge: %d\n" ..
+        "⏱️ Runtime: %s\n" ..
+        "🎯 Goal: %s",
+        FormatNumber(currentCash),
+        FormatNumber(cpm),
+        wheatCount,
+        fridgeCount,
+        runtime,
+        CurrentGoalText
+    )
 end
 
 local function InitializeModules()
@@ -729,6 +906,34 @@ local function GetShopCmdsModule()
     end)
     if ok then
         CachedShopCmdsModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedRecipeModule = nil
+local function GetRecipeModule()
+    if CachedRecipeModule then
+        return CachedRecipeModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Directory.Recipe)
+    end)
+    if ok then
+        CachedRecipeModule = module
+    end
+    return ok and module or nil
+end
+
+local CachedRecipeCmdsModule = nil
+local function GetRecipeCmdsModule()
+    if CachedRecipeCmdsModule then
+        return CachedRecipeCmdsModule
+    end
+    local ok, module = pcall(function()
+        return require(ReplicatedStorage.Framework.Client.RecipeCmds)
+    end)
+    if ok then
+        CachedRecipeCmdsModule = module
     end
     return ok and module or nil
 end
@@ -2998,6 +3203,10 @@ local WheatPlantConfig = {
 local AutoBuyWheatEnabled = false
 local AutoBuyWheatRunning = false
 
+-- v3.8: Auto Enable Recipe (Independent)
+local AutoEnableRecipeEnabled = false
+local AutoEnableRecipeRunning = false
+
 local function TryAutoBuyWheat()
     if not AutoBuyWheatEnabled or AutoBuyWheatRunning then
         return
@@ -3106,14 +3315,161 @@ local function RunFridgeBuyWatcher()
 end
 
 -- ============================================================
--- LAYOUT PREP PHASE ORCHESTRATOR (v3.3)
+-- AUTO ENABLE RECIPE (v3.8) - INDEPENDENT SYSTEM
 --
--- CHANGE v3.3:
--- - Wheat Plant mulai dibeli begitu Farming skill unlock level 1+
---   (INDEPENDEN dari fase Layout Prep)
--- - Rusty Fridge baru dibeli setelah fase Layout Prep aktif (Service 10 + Earn $200)
--- - Load layout trigger: 168 Wheat + 2 Fridge di inventory
--- - ANTI RECONNECT-LOOP: cek Wheat & Fridge di MAP, bukan inventory
+-- Auto-enable SEMUA recipe (lama/baru unlock) yang disabled
+-- - HANYA kirim remote kalau ADA recipe yang disabled
+-- - Kalau semua enabled/locked → IDLE, gak kirim apa-apa
+-- - Hook ke RecipeCmds.Discovered event buat recipe baru unlock
+-- ============================================================
+local function TryAutoEnableRecipes()
+    if not AutoEnableRecipeEnabled or AutoEnableRecipeRunning then
+        return
+    end
+
+    local Recipe = GetRecipeModule()
+    local RecipeCmds = GetRecipeCmdsModule()
+    
+    if not Recipe or not RecipeCmds then
+        return
+    end
+
+    AutoEnableRecipeRunning = true
+
+    task.spawn(function()
+        local enabledCount = 0
+        local hasDisabledRecipe = false
+        
+        -- FIRST PASS: Cek dulu ada gak recipe yang disabled
+        for recipeId, dir in pairs(Recipe) do
+            if dir.DisableToggle then
+                continue
+            end
+
+            local okDisabled, isCurrentlyDisabled = pcall(function()
+                return RecipeCmds.IsDisabled(recipeId)
+            end)
+
+            if okDisabled and isCurrentlyDisabled then
+                hasDisabledRecipe = true
+                break -- Found one, gak perlu loop lagi
+            end
+        end
+
+        -- SECOND PASS: Kalau ada yang disabled, baru enable
+        if hasDisabledRecipe then
+            for recipeId, dir in pairs(Recipe) do
+                if dir.DisableToggle then
+                    continue
+                end
+
+                local okDisabled, isCurrentlyDisabled = pcall(function()
+                    return RecipeCmds.IsDisabled(recipeId)
+                end)
+
+                if okDisabled and isCurrentlyDisabled then
+                    local okToggle = pcall(function()
+                        RecipeCmds.ToggleEnabled(recipeId)
+                    end)
+                    
+                    if okToggle then
+                        enabledCount = enabledCount + 1
+                        local displayName = dir.DisplayName or recipeId
+                        Log(string.format("📗 Enabled recipe: %s", displayName))
+                    end
+                    
+                    task.wait(0.05) -- Anti spam network
+                end
+            end
+
+            if enabledCount > 0 then
+                Log(string.format("✅ Auto enabled %d recipe(s)", enabledCount))
+            end
+        end
+        -- Kalau gak ada yang disabled, idle aja (gak log apa-apa)
+
+        task.wait(1)
+        AutoEnableRecipeRunning = false
+    end)
+end
+
+local RecipeWatcherRunning = false
+local RecipeDiscoveredConnected = false
+
+local function RunRecipeWatcher()
+    if RecipeWatcherRunning then
+        return
+    end
+    RecipeWatcherRunning = true
+
+    -- Hook ke RecipeCmds.Discovered event (sekali)
+    if not RecipeDiscoveredConnected then
+        local RecipeCmds = GetRecipeCmdsModule()
+        if RecipeCmds and RecipeCmds.Discovered then
+            RecipeCmds.Discovered:Connect(function(recipeId)
+                if not AutoEnableRecipeEnabled then
+                    return
+                end
+
+                -- Kasih jeda buat game update state
+                task.wait(0.5)
+
+                -- Cek CUMA recipe yang baru unlock ini
+                local Recipe = GetRecipeModule()
+                if not Recipe or not Recipe[recipeId] then
+                    return
+                end
+
+                local dir = Recipe[recipeId]
+                if dir.DisableToggle then
+                    return -- Recipe ini gak bisa di-toggle
+                end
+
+                local okDisabled, isCurrentlyDisabled = pcall(function()
+                    return RecipeCmds.IsDisabled(recipeId)
+                end)
+
+                if okDisabled and isCurrentlyDisabled then
+                    -- Recipe baru unlock & disabled → enable
+                    local okToggle = pcall(function()
+                        RecipeCmds.ToggleEnabled(recipeId)
+                    end)
+                    
+                    if okToggle then
+                        local displayName = dir.DisplayName or recipeId
+                        Log(string.format("🆕 New recipe unlocked & enabled: %s", displayName))
+                    end
+                else
+                    -- Recipe baru unlock tapi udah enabled → idle
+                    local displayName = dir.DisplayName or recipeId
+                    Log(string.format("🆕 New recipe unlocked (already enabled): %s", displayName))
+                end
+            end)
+            RecipeDiscoveredConnected = true
+            Log("✓ Recipe discovery hook connected")
+        end
+    end
+
+    -- Loop cek tiap 10 detik (diperlambat, karena sekarang cuma kirim kalau ada disabled)
+    task.spawn(function()
+        while AutoEnableRecipeEnabled and Running do
+            if not AutoEnableRecipeRunning then
+                TryAutoEnableRecipes()
+            end
+            task.wait(10) -- Dari 5 detik jadi 10 detik
+        end
+        RecipeWatcherRunning = false
+    end)
+end
+
+-- ============================================================
+-- LAYOUT PREP PHASE ORCHESTRATOR (v3.7)
+--
+-- CHANGE v3.7:
+-- - Quest automation TETAP JALAN sambil nunggu Wheat Plant 168
+-- - QuestAutomationStopped cuma aktif SETELAH target inventory tercapai
+-- - Flow: Farming unlock → Buy Wheat (background) → Quest tetap jalan
+--         → Target 168 Wheat + 2 Fridge → STOP quest → Load layout
 -- ============================================================
 local AutoHarvestCropEnabled = false
 
@@ -3166,10 +3522,12 @@ task.spawn(function()
 
             if serviceLevel >= 10 and Earn200QuestDone then
                 LayoutPrepPhaseActive = true
-                QuestAutomationStopped = true
+                CurrentGoalText = "Layout Prep (Buy 168 Wheat + 2 Fridge)"
+                -- v3.7: QuestAutomationStopped TIDAK di-set true di sini lagi!
+                -- Biarkan quest automation tetap jalan sambil nunggu Wheat
                 AutoClaimEarningsEnabled = true
                 
-                -- v3.3: Enable auto-BUY Fridge (Wheat sudah aktif dari Farming unlock)
+                -- Enable auto-BUY Fridge (Wheat sudah aktif dari Farming unlock)
                 AutoBuyFridgeEnabled = true
                 RunFridgeBuyWatcher()
 
@@ -3180,7 +3538,9 @@ task.spawn(function()
                 if wheatOnMap >= LayoutPrepConfig.WheatTarget and fridgeOnMap >= LayoutPrepConfig.FridgeTarget then
                     -- Layout sudah pernah di-apply sebelumnya -> skip load, langsung harvest
                     LayoutPrepTriggered = true
+                    QuestAutomationStopped = true -- quest stop karena udah selesai
                     AutoHarvestCropEnabled = true
+                    CurrentGoalText = "Auto Harvest Wheat (Layout Applied)"
                     
                     Log(string.format(
                         "✅ Restaurant udah punya Wheat %d/%d & Rusty Fridge %d/%d DI MAP -- layout %s kemungkinan udah pernah di-apply, SKIP Layouts_Load, AUTO HARVEST AKTIF",
@@ -3188,22 +3548,24 @@ task.spawn(function()
                         LayoutPrepConfig.LayoutCode))
                 else
                     Log(string.format(
-                        "🎯 Service Level %d + quest Earn $200 selesai -> fase Layout Prep aktif: beli Rusty Fridge %d (inventory), quest-chasing berhenti",
+                        "🎯 Service Level %d + quest Earn $200 selesai -> fase Layout Prep aktif: beli Rusty Fridge %d (inventory), QUEST TETAP JALAN sambil nunggu Wheat 168",
                         serviceLevel, LayoutPrepConfig.FridgeTarget))
                 end
             end
         end
 
-        -- v3.3: Cek inventory (bukan placed count) untuk trigger load layout
+        -- v3.7: Cek inventory untuk trigger STOP quest + load layout
         if LayoutPrepPhaseActive and not LayoutPrepTriggered then
             local wheatInInventory = GetItemStock(WheatPlantConfig.ItemName)
             local fridgeInInventory = GetItemStock(LayoutPrepConfig.FridgeItemName)
 
             if wheatInInventory >= LayoutPrepConfig.WheatTarget and fridgeInInventory >= LayoutPrepConfig.FridgeTarget then
                 LayoutPrepTriggered = true
+                QuestAutomationStopped = true -- BARU di-stop di sini!
+                CurrentGoalText = "Loading Layout (Reconnecting...)"
 
                 Log(string.format(
-                    "✅ Target inventory kepenuhi (Wheat %d/%d, Rusty Fridge %d/%d) -> load layout %s",
+                    "✅ Target inventory kepenuhi (Wheat %d/%d, Rusty Fridge %d/%d) -> QUEST AUTOMATION STOP -> load layout %s",
                     wheatInInventory, LayoutPrepConfig.WheatTarget, fridgeInInventory, LayoutPrepConfig.FridgeTarget,
                     LayoutPrepConfig.LayoutCode))
 
@@ -3217,10 +3579,10 @@ task.spawn(function()
             end
         end
         
-        -- v3.2: Auto Harvest Crop aktif kalau layout udah di-apply
+        -- Auto Harvest Crop aktif kalau layout udah di-apply
         if LayoutPrepTriggered and AutoHarvestCropEnabled then
-            -- Auto harvest logic akan dijalankan via integrasi dengan auto harvest.lua
-            -- di bawah (lihat section AUTO HARVEST INTEGRATION)
+            CurrentGoalText = "Auto Harvest Wheat (Active)"
+            -- Auto harvest logic jalan via integrasi
         end
     end
 end)
@@ -4093,8 +4455,14 @@ StartButton.MouseButton1Click:Connect(function()
         QuestAutomationStopped = false
         LayoutPrepTriggered = false
 
+        -- v3.8: reset stats tracking
+        ScriptStartTime = tick()
+        LastCashAmount = 0
+        CashHistory = {}
+        CurrentGoalText = "Initializing..."
+
         Log("===========================================")
-        Log("Kaitun RAR v3.7 Started")
+        Log("Kaitun RAR v3.8 Started")
         Log("===========================================")
 
         if not InitializeModules() then
@@ -4117,13 +4485,16 @@ StartButton.MouseButton1Click:Connect(function()
 
             if layoutApplied or Config.LayoutCode ~= "" and Config.LayoutCode ~= "Paste Layout Code Here..." then
                 CurrentStep = 4
+                CurrentGoalText = "Auto Harvest & Serve (Layout Applied)"
                 Log("✓ Layout detected, jumping to Step 4")
             else
                 CurrentStep = 2
+                CurrentGoalText = "Import Layout & Setup"
                 Log("✓ Level 10+ reached, starting from Step 2")
             end
         else
             CurrentStep = 1
+            CurrentGoalText = "Complete Quests (Service Level 10)"
             Log("✓ Starting from Step 1 (Quest completion)")
         end
 
@@ -4157,6 +4528,19 @@ StartButton.MouseButton1Click:Connect(function()
                 #Config.ShopBuyItems, #Config.ShopBuyCategories))
         end
 
+        -- v3.8: Auto Enable Recipe - independen, jalan terus di background
+        AutoEnableRecipeEnabled = true
+        RunRecipeWatcher()
+        Log("✓ Auto Enable Recipe enabled (all disabled recipes will be auto-enabled)")
+
+        -- v3.8: Start stats updater loop
+        task.spawn(function()
+            while Running do
+                UpdateStatsLabel()
+                task.wait(1) -- Update tiap 1 detik
+            end
+        end)
+
         task.spawn(MainLoop)
     end
 end)
@@ -4176,6 +4560,7 @@ StopButton.MouseButton1Click:Connect(function()
     AutoBuyShopEnabled = false
     AutoBuyPlotsEnabled = false
     AutoHarvestCropEnabled = false
+    AutoEnableRecipeEnabled = false
 
     UpdateStatus("Stopped", Color3.fromRGB(170, 0, 0))
     Log("Kaitun stopped")
